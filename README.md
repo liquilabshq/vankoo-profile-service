@@ -72,27 +72,6 @@ pnpm build
 pnpm start:prod
 ```
 
-Si usas **WebStorm**, puedes configurar la ejecución del proyecto directamente desde el IDE para facilitar el desarrollo:
-
-1. En la parte superior derecha, despliega el menú de configuraciones y haz click en "Edit Configurations...".
-
-   ![img.png](/docs/images/webstorm-step-1.png)
-
-2. Luego, haz click en el botón "+" y selecciona "npm" (aunque uses pnpm, WebStorm usa esta plantilla).
-
-   ![img_1.png](/docs/images/webstorm-step-2.png)
-
-3. Configura los campos así:
-
-    - Name: `Vankoo: Profiles (Dev)`
-    - Command: `run`
-    - Scripts: `start:dev` (Este es el modo watch que reinicia el servidor cuando guardas cambios).
-    - Package manager: `pnpm`
-
-   ![img_2.png](/docs/images/webstorm-step-3.png)
-
-4. Haz click en "Apply" y luego en "OK".
-
 ## Pruebas (Testing)
 
 ```bash
@@ -106,4 +85,39 @@ pnpm run test:e2e
 pnpm run test:cov
 ```
 
-Si usas **WebStorm**, puedes configurar las pruebas de manera similar a la configuración de ejecución, seleccionando el script correspondiente (`test`, `test:e2e`, o `test:cov`) en el campo "Scripts".
+## Configuración en WebStorm
+
+### Ejecución desde el IDE
+
+Si usas **WebStorm**, puedes configurar la ejecución del proyecto directamente desde el IDE para facilitar el desarrollo:
+
+1. En la parte superior derecha, despliega el menú de configuraciones y haz click en "Edit Configurations...".
+
+   ![img.png](/docs/images/webstorm-step-1.png)
+
+2. Luego, haz click en el botón "+" y selecciona "npm" (aunque uses pnpm, WebStorm usa esta plantilla).
+
+   ![img_1.png](/docs/images/webstorm-step-2.png)
+
+3. Configura los campos así:
+
+   - Name: `Vankoo: Profiles (Dev)`
+   - Command: `run`
+   - Scripts: `start:dev` (Este es el modo watch que reinicia el servidor cuando guardas cambios).
+   - Package manager: `pnpm`
+
+   ![img_2.png](/docs/images/webstorm-step-3.png)
+
+4. Haz click en "Apply" y luego en "OK".
+
+Puedes hacer lo mismo para tests unitarios o e2e, creando nuevas configuraciones con los comandos `test` o `test:e2e`.
+
+### Establecer el Package Manager
+
+Para asegurarte de que WebStorm use **pnpm** en lugar de **npm**:
+
+1. Ve a `File > Settings` (o `WebStorm > Settings` en macOS).
+2. Navega a `Languages & Frameworks > JavaScript Runtime`.
+3. En la sección "Package manager", selecciona `pnpm` en lugar de `npm`.
+
+   ![img_3.png](/docs/images/webstorm-step-4.png)
