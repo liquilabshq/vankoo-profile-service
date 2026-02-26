@@ -1,7 +1,7 @@
 # compiled output
-/dist
-/node_modules
-/build
+dist/
+node_modules/
+build/
 
 # Logs
 logs
@@ -17,11 +17,11 @@ lerna-debug.log*
 Thumbs.db
 
 # Tests
-/coverage
-/.nyc_output
+coverage/
+.nyc_output/
 
 # IDEs and editors
-/.idea
+.idea/
 .project
 .classpath
 .c9/
@@ -30,11 +30,7 @@ Thumbs.db
 *.sublime-workspace
 
 # IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.vscode/
 
 # dotenv environment variable files
 .env
@@ -43,9 +39,12 @@ Thumbs.db
 .env.production.local
 .env.local
 
+# pnpm specific
+.pnpm-store/
+
 # temp directory
-.temp
-.tmp
+.temp/
+.tmp/
 
 # Runtime data
 pids
