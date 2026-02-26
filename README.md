@@ -121,3 +121,24 @@ Para asegurarte de que WebStorm use **pnpm** en lugar de **npm**:
 3. En la sección "Package manager", selecciona `pnpm` en lugar de `npm`.
 
    ![img_3.png](/docs/images/webstorm-step-4.png)
+
+## Arquitectura del Microservicio
+
+El proyecto sigue una estructura modular de NestJS orientada a dominios:
+
+```text
+src/
+├── profiles/           # Profile Context
+│   ├── domain/         # Capa 1: Reglas de negocio (Entidades, Agregados)
+│   ├── application/    # Capa 2: Casos de uso (CreateProfile, UpdateProfile)
+│   ├── infrastructure/ # Capa 3: Persistencia (Postgres) y Mensajería (Kafka)
+│   └── interfaces/     # Capa 4: Controladores REST y DTOs
+├── app.module.ts
+└── main.ts
+```
+
+## Estándares de Código
+
+### Estilo
+
+El proyecto usa ESLint y Prettier. WebStorm los detectará automáticamente.
