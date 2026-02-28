@@ -1,4 +1,4 @@
-# Vankoo: Profile Service
+# Vankoo: ProfileAggregate Service
 
 Microservicio de gestión de perfiles para la plataforma de crowdfactoring **Vankoo**. Desarrollado con NestJS y estructurado para ser escalable y seguro.
 
@@ -128,7 +128,7 @@ El proyecto sigue una estructura modular de NestJS orientada a dominios:
 
 ```text
 src/
-├── profiles/           # Profile Context
+├── profiles/           # ProfileAggregate Context
 │   ├── domain/         # Capa 1: Reglas de negocio (Entidades, Agregados)
 │   ├── application/    # Capa 2: Casos de uso (CreateProfile, UpdateProfile)
 │   ├── infrastructure/ # Capa 3: Persistencia (Postgres) y Mensajería (Kafka)
