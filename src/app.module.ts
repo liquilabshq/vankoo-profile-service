@@ -3,7 +3,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ProfilesModule } from './profiles/profiles.module';
+import { CompaniesModule } from './profiles/companies.module';
+import { InvestorsModule } from './profiles/investors.module';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 @Module({
   imports: [
@@ -40,12 +42,14 @@ import { ProfilesModule } from './profiles/profiles.module';
             'vankoo_profile_db_dev',
           autoLoadEntities: true,
           synchronize: true, // pasar a false en produccion
+          namingStrategy: new SnakeNamingStrategy(),
         };
       },
     }),
 
     // 3. Tu Bounded Context
-    ProfilesModule,
+    CompaniesModule,
+    InvestorsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
