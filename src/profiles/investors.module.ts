@@ -33,5 +33,6 @@ import { InvestorsController } from './interfaces/rest/investors.controller';
     { provide: INVESTOR_COMMAND_SERVICE, useClass: InvestorCommandServiceImpl },
     { provide: INVESTOR_QUERY_SERVICE, useClass: InvestorQueryServiceImpl },
   ],
+  exports: [INVESTOR_COMMAND_SERVICE],
 })
 export class InvestorsModule {}

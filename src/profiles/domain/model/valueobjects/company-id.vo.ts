@@ -1,3 +1,9 @@
+import { randomUUID } from 'crypto';
+
 export class CompanyId {
-  constructor(public readonly value: string) {}
+  public readonly value: string;
+
+  constructor(value?: string) {
+    this.value = value || randomUUID();
+  }
 }

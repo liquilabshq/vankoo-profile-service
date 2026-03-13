@@ -5,11 +5,11 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
  * @summary Clases auxiliares (Embeddables) para aplanar los Value Objects compuestos.
  */
 export class AddressEmbeddable {
-  @Column({ name: 'street' }) street: string;
-  @Column({ name: 'city' }) city: string;
-  @Column({ name: 'state' }) state: string;
-  @Column({ name: 'postal_code' }) postalCode: string;
-  @Column({ name: 'country' }) country: string;
+  @Column({ name: 'street', nullable: true }) street: string;
+  @Column({ name: 'city', nullable: true }) city: string;
+  @Column({ name: 'state', nullable: true }) state: string;
+  @Column({ name: 'postal_code', nullable: true }) postalCode: string;
+  @Column({ name: 'country', nullable: true }) country: string;
 }
 
 export class SustainabilityEmbeddable {
@@ -30,13 +30,13 @@ export class CompanyEntity {
   @Column({ name: 'user_id', type: 'uuid' })
   userId: string; // Representa UserId
 
-  @Column({ name: 'ruc_number', length: 11, unique: true })
+  @Column({ name: 'ruc_number', length: 11, unique: true, nullable: true })
   rucNumber: string;
 
-  @Column({ name: 'business_name' })
+  @Column({ name: 'business_name', nullable: true })
   businessName: string;
 
-  @Column({ name: 'industry_sector', type: 'varchar' })
+  @Column({ name: 'industry_sector', type: 'varchar', nullable: true })
   industrySector: string; // Guardamos el Enum IndustrySector como texto
 
   @Column({ name: 'contact_email' })

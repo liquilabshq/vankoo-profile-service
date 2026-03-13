@@ -30,5 +30,6 @@ import { CompaniesController } from './interfaces/rest/companies.controller';
     // El Query Service se agregará aquí
     { provide: COMPANY_QUERY_SERVICE, useClass: CompanyQueryServiceImpl },
   ],
+  exports: [COMPANY_COMMAND_SERVICE],
 })
 export class CompaniesModule {}

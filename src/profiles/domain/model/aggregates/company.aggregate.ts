@@ -22,15 +22,50 @@ export class Company {
   constructor(
     public readonly id: CompanyId,
     public readonly userId: UserId,
-    public readonly rucNumber: RucNumber,
-    public readonly businessName: BusinessName,
-    public readonly industrySector: IndustrySector,
     public readonly contactEmail: Email,
-    public readonly contactPhone: PhoneNumber | undefined,
-    public readonly legalAddress: Address,
-    public readonly sustainabilityStatus: SustainabilityStatus,
+
+    // 2. Opcionales (Nacen vacíos y se llenan después. Se les quita el readonly)
+    public rucNumber?: RucNumber,
+    public businessName?: BusinessName,
+    public industrySector?: IndustrySector,
+    public contactPhone?: PhoneNumber,
+    public legalAddress?: Address,
+    public sustainabilityStatus?: SustainabilityStatus,
   ) {
     this.kycStatus = KycStatus.PENDING;
+  }
+  public completeProfile(
+    rucNumber: string,
+    businessName: string,
+    industrySector: string,
+    contactPhone: string,
+    legalAddress: {
+      street: string;
+      city: string;
+      state: string;
+      postalCode: string;
+      country: string;
+    },
+  ): void {
+    // 1. Instanciamos los Value Objects
+    this.rucNumber = new RucNumber(rucNumber);
+    this.businessName = new BusinessName(businessName);
+    this.contactPhone = new PhoneNumber(contactPhone);
+
+    // 2. Casteamos el string al Enum
+    this.industrySector = industrySector as IndustrySector;
+
+    // 3. Mapeamos la dirección
+    this.legalAddress = new Address(
+      legalAddress.street,
+      legalAddress.city,
+      legalAddress.state,
+      legalAddress.postalCode,
+      legalAddress.country,
+    );
+
+    // Opcional: Podrías inicializar el status de sostenibilidad por defecto aquí si lo deseas
+    // this.sustainabilityStatus = new SustainabilityStatus(false, null);
   }
 
   public uploadRucDocument(rucUrl: DocumentUrl): void {

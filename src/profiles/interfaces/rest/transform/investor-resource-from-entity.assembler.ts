@@ -6,8 +6,10 @@ export class InvestorResourceFromEntityAssembler {
   public static toResourceFromEntity(entity: Investor): InvestorResource {
     return {
       id: entity.id.value,
-      dni: entity.dni.value,
-      fullName: `${entity.fullName.firstName} ${entity.fullName.lastName}`, // Concatenamos para el front
+      dni: entity.dni?.value || '',
+      fullName: entity.fullName
+        ? `${entity.fullName.firstName} ${entity.fullName.lastName}`
+        : '',
       photoUrl: entity.getPhotoUrl()?.url,
       dniDocumentUrl: entity.getDniDocumentUrl()?.url,
       bankAccount: entity.bankAccount

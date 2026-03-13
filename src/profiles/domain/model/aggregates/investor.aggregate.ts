@@ -20,15 +20,47 @@ export class Investor {
   public bankAccount?: BankAccount;
 
   constructor(
+    // 1. Obligatorios
     public readonly id: InvestorId,
     public readonly userId: UserId,
-    public readonly dni: DniNumber,
-    public readonly fullName: FullName,
     public readonly contactEmail: Email,
-    public readonly contactPhone: PhoneNumber | undefined,
-    public readonly billingAddress: Address,
+
+    // 2. Opcionales (Se llenarán luego)
+    public dni?: DniNumber,
+    public fullName?: FullName,
+    public contactPhone?: PhoneNumber,
+    public billingAddress?: Address,
   ) {
     this.kycStatus = KycStatus.PENDING;
+  }
+  public completeProfile(
+    dni: string,
+    firstName: string,
+    lastName: string,
+    contactPhone: string,
+    billingAddress: {
+      street: string;
+      city: string;
+      state: string;
+      postalCode: string;
+      country: string;
+    },
+  ): void {
+    // Si algún dato es inválido, el constructor del VO debería lanzar un error.
+    this.dni = new DniNumber(dni);
+    this.fullName = new FullName(firstName, lastName);
+    this.contactPhone = new PhoneNumber(contactPhone);
+    this.billingAddress = new Address(
+      billingAddress.street,
+      billingAddress.city,
+      billingAddress.state,
+      billingAddress.postalCode,
+      billingAddress.country,
+    );
+
+    // Regla de negocio opcional: Si el perfil se completa, podríamos
+    // cambiar el KYC status a 'IN_REVIEW' o algo similar si tu flujo lo requiere.
+    // this.kycStatus = KycStatus.IN_REVIEW;
   }
 
   public verifyKyc(): void {

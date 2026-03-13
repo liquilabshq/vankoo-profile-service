@@ -24,6 +24,8 @@ import type { IInvestorCommandService } from '../../domain/services/investor-com
 import { INVESTOR_QUERY_SERVICE } from '../../domain/services/investor-query.service';
 import type { IInvestorQueryService } from '../../domain/services/investor-query.service';
 import { GetInvestorByIdQuery } from '../../domain/model/queries/get-investor-by-id.query';
+import { CompleteInvestorProfileCommandFromResourceAssembler } from './transform/complete-investor-profile-command-from-resource.assembler';
+import { CompleteInvestorProfileResource } from './resources/complete-investor-profile.resource';
 
 /** @author LiquiLabs */
 @ApiTags('Investors')
@@ -36,6 +38,41 @@ export class InvestorsController {
     @Inject(INVESTOR_QUERY_SERVICE)
     private readonly investorQueryService: IInvestorQueryService,
   ) {}
+
+  @Patch(':id/profile')
+  @ApiOperation({ summary: 'Completar datos del perfil del Inversor' })
+  @ApiParam({ name: 'id', description: 'UUID del Inversor', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Perfil completado exitosamente' })
+  async completeProfile(
+    @Param('id') investorId: string,
+    @Body() resource: CompleteInvestorProfileResource,
+    @Res() res: Response,
+  ) {
+    try {
+      const command =
+        CompleteInvestorProfileCommandFromResourceAssembler.toCommandFromResource(
+          investorId,
+          resource,
+        );
+
+      const investor =
+        await this.investorCommandService.handleCompleteProfile(command);
+      const investorResource =
+        InvestorResourceFromEntityAssembler.toResourceFromEntity(investor);
+
+      return res.status(HttpStatus.OK).json({
+        message: 'Perfil completado exitosamente',
+        investor: investorResource,
+      });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error inesperado';
+      const status = errorMessage.includes('no encontrado')
+        ? HttpStatus.NOT_FOUND
+        : HttpStatus.BAD_REQUEST;
+      return res.status(status).json({ message: errorMessage });
+    }
+  }
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un Inversor por su ID' })

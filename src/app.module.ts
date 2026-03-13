@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { CompaniesModule } from './profiles/companies.module';
 import { InvestorsModule } from './profiles/investors.module';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { UserRegisteredSubscriber } from './profiles/interfaces/events/user-registered.subscriber';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
             'vankoo_profile_db_dev',
           autoLoadEntities: true,
           synchronize: true, // pasar a false en produccion
+          logging: true,
           namingStrategy: new SnakeNamingStrategy(),
         };
       },
@@ -51,7 +53,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
     CompaniesModule,
     InvestorsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, UserRegisteredSubscriber],
   providers: [AppService],
 })
 export class AppModule {}

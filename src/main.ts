@@ -3,25 +3,26 @@ import { AppModule } from './app.module';
 import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const port = process.env.PORT ?? 3000;
   const logger = new Logger('NestApplication');
 
-  // 1. Configurar prefijo global y Versionamiento (Para que las rutas sean /api/v1/...)
+  // 1. Configurar prefijo global y Versionamiento
   app.setGlobalPrefix('api');
   app.enableVersioning({
     type: VersioningType.URI,
-    defaultVersion: '1', // Agrega la 'v1' automáticamente
+    defaultVersion: '1',
   });
 
   // 2. Activar class-validator y class-transformer globalmente
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Elimina campos basura que el cliente envíe
-      forbidNonWhitelisted: true, // Lanza error 400 si envían campos no permitidos
-      transform: true, // Transforma los payloads automáticamente
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
 
@@ -35,17 +36,36 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
 
-  // 4. Integrar Scalar (Documentación interactiva)
+  // 4. Integrar Scalar
   app.use(
     '/reference',
     apiReference({
       spec: { content: document },
-      theme: 'purple', // Tema de color para Scalar
+      theme: 'purple',
     } as any),
   );
 
+  // 🚨 5. CONFIGURACIÓN DE KAFKA 🚨
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.KAFKA,
+    options: {
+      client: {
+        brokers: ['localhost:9092'], // El puerto de tu broker de Docker
+      },
+      consumer: {
+        groupId: 'profile-service-consumer', // ID único para que Kafka sepa quién lee
+      },
+    },
+  });
+
+  // 6. Arrancar ambos motores (Kafka y REST HTTP)
+  await app.startAllMicroservices();
   await app.listen(port);
-  logger.log(`Vankoo Profile Service is running on: http://localhost:${port}`);
+
+  logger.log(
+    `🚀 Vankoo Profile Service is running on: http://localhost:${port}`,
+  );
   logger.log(`📚 Documentación lista en: http://localhost:${port}/reference`);
+  logger.log(`🎧 Conectado a Kafka. Escuchando eventos...`);
 }
 bootstrap();

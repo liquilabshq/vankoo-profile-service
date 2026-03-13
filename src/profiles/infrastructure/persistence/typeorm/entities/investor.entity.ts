@@ -3,11 +3,11 @@ import { BankAccountEntity } from './bank-account.entity';
 // Asumiendo que reutilizamos o recreamos la clase AddressEmbeddable aquí
 
 export class AddressEmbeddable {
-  @Column({ name: 'street' }) street: string;
-  @Column({ name: 'city' }) city: string;
-  @Column({ name: 'state' }) state: string;
-  @Column({ name: 'postal_code' }) postalCode: string;
-  @Column({ name: 'country' }) country: string;
+  @Column({ name: 'street', nullable: true }) street: string;
+  @Column({ name: 'city', nullable: true }) city: string;
+  @Column({ name: 'state', nullable: true }) state: string;
+  @Column({ name: 'postal_code', nullable: true }) postalCode: string;
+  @Column({ name: 'country', nullable: true }) country: string;
 }
 
 /**

@@ -21,6 +21,8 @@ import type { ICompanyCommandService } from '../../domain/services/company-comma
 import { COMPANY_QUERY_SERVICE } from '../../domain/services/company-query.service';
 import type { ICompanyQueryService } from '../../domain/services/company-query.service';
 import { GetCompanyByIdQuery } from '../../domain/model/queries/get-company-by-id.query';
+import { CompleteCompanyProfileResource } from './resources/complete-company-profile.resource';
+import { CompleteCompanyProfileCommandFromResourceAssembler } from './transform/complete-company-profile-command-from-resource.assembler';
 
 /** @author LiquiLabs */
 @ApiTags('Companies')
@@ -33,6 +35,46 @@ export class CompaniesController {
     @Inject(COMPANY_QUERY_SERVICE)
     private readonly companyQueryService: ICompanyQueryService,
   ) {}
+
+  @Patch(':id/profile')
+  @ApiOperation({ summary: 'Completar datos del perfil de la Empresa (MYPE)' })
+  @ApiParam({ name: 'id', description: 'UUID de la Empresa', type: 'string' })
+  @ApiResponse({
+    status: 200,
+    description: 'Perfil de empresa completado exitosamente',
+  })
+  async completeProfile(
+    @Param('id') companyId: string,
+    @Body() resource: CompleteCompanyProfileResource,
+    @Res() res: Response,
+  ) {
+    try {
+      const command =
+        CompleteCompanyProfileCommandFromResourceAssembler.toCommandFromResource(
+          companyId,
+          resource,
+        );
+
+      const company =
+        await this.companyCommandService.handleCompleteProfile(command);
+
+      const companyResource =
+        CompanyResourceFromEntityAssembler.toResourceFromEntity(company);
+
+      return res.status(HttpStatus.OK).json({
+        message: 'Perfil de empresa completado exitosamente',
+        company: companyResource,
+      });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error inesperado';
+      const status = errorMessage.includes('no encontrada')
+        ? HttpStatus.NOT_FOUND
+        : HttpStatus.BAD_REQUEST;
+      return res.status(status).json({ message: errorMessage });
+    }
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener una Empresa por su ID' })
   @ApiParam({ name: 'id', description: 'UUID de la Empresa', type: 'string' })
