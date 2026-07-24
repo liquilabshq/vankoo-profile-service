@@ -18,7 +18,7 @@ export class UserRegisteredSubscriber {
     private readonly companyCommandService: ICompanyCommandService,
   ) {}
 
-  @EventPattern('vankoo.iam.events') // El tópico exacto que vimos en Kafka UI
+  @EventPattern('vankoo.iam.events') // El tópico exacto de Kafka UI
   async handleUserRegisteredEvent(@Payload() message: any) {
     // NestJS a veces envuelve el JSON de Kafka dentro de un atributo "value".
     // Esto asegura que extraigamos los datos sin importar cómo lleguen.

@@ -4,11 +4,16 @@ import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const port = process.env.PORT ?? 3000;
   const logger = new Logger('NestApplication');
+
+  // Extraemos el servicio de configuración de forma nativa en NestJS
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('PORT') || 3000;
+  const kafkaBrokers = configService.get<string>('KAFKA_BROKERS') || 'localhost:9092';
 
   // 1. Configurar prefijo global y Versionamiento
   app.setGlobalPrefix('api');
@@ -29,9 +34,7 @@ async function bootstrap() {
   // 3. Configurar Swagger (OpenAPI)
   const config = new DocumentBuilder()
     .setTitle('Vankoo Profile Service')
-    .setDescription(
-      'Microservicio de gestión de perfiles para la plataforma Vankoo',
-    )
+    .setDescription('Microservicio de gestión de perfiles para la plataforma Vankoo')
     .setVersion('1.0')
     .build();
   const document = SwaggerModule.createDocument(app, config);
@@ -45,15 +48,15 @@ async function bootstrap() {
     } as any),
   );
 
-  // 🚨 5. CONFIGURACIÓN DE KAFKA 🚨
+  // 🚨 5. CONFIGURACIÓN DE KAFKA SEGURA 🚨
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
     options: {
       client: {
-        brokers: ['localhost:9092'], // El puerto de tu broker de Docker
+        brokers: [kafkaBrokers], // 👈 Usamos la variable extraída arriba
       },
       consumer: {
-        groupId: 'profile-service-consumer', // ID único para que Kafka sepa quién lee
+        groupId: 'profile-service-consumer',
       },
     },
   });
@@ -62,10 +65,8 @@ async function bootstrap() {
   await app.startAllMicroservices();
   await app.listen(port);
 
-  logger.log(
-    `🚀 Vankoo Profile Service is running on: http://localhost:${port}`,
-  );
+  logger.log(`🚀 Vankoo Profile Service is running on: http://localhost:${port}`);
   logger.log(`📚 Documentación lista en: http://localhost:${port}/reference`);
-  logger.log(`🎧 Conectado a Kafka. Escuchando eventos...`);
+  logger.log(`🎧 Conectado a Kafka en el broker: ${kafkaBrokers}`);
 }
 bootstrap();

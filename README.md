@@ -142,3 +142,8 @@ src/
 ### Estilo
 
 El proyecto usa ESLint y Prettier. WebStorm los detectará automáticamente.
+
+## agregar como usar las variables de entorno en local y como configurar
+## .env example
+### como correrlo en docker
+## modifcar el docker compose 

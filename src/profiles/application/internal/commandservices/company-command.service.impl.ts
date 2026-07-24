@@ -35,7 +35,7 @@ export class CompanyCommandServiceImpl implements ICompanyCommandService {
       );
     }
 
-    // El agregado hace su magia de validación interna
+
     company.completeProfile(
       command.rucNumber,
       command.businessName,
@@ -53,7 +53,7 @@ export class CompanyCommandServiceImpl implements ICompanyCommandService {
     const userId = new UserId(command.userId); // ID que viene del IAM
     const email = new Email(command.email); // Email que viene del IAM
 
-    // Creamos el cascarón (fíjate que ahora acepta solo 3 argumentos)
+    // Creamos el cascarón
     const company = new Company(companyId, userId, email);
 
     await this.companyRepository.save(company);

@@ -59,7 +59,7 @@ export class Investor {
     );
 
     // Regla de negocio opcional: Si el perfil se completa, podríamos
-    // cambiar el KYC status a 'IN_REVIEW' o algo similar si tu flujo lo requiere.
+    // cambiar el KYC status a 'IN_REVIEW' o algo similar si el flujo lo requiere.
     // this.kycStatus = KycStatus.IN_REVIEW;
   }
 

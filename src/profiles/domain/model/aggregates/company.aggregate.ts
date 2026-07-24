@@ -47,15 +47,15 @@ export class Company {
       country: string;
     },
   ): void {
-    // 1. Instanciamos los Value Objects
+
     this.rucNumber = new RucNumber(rucNumber);
     this.businessName = new BusinessName(businessName);
     this.contactPhone = new PhoneNumber(contactPhone);
 
-    // 2. Casteamos el string al Enum
+    //Castear el string al Enum
     this.industrySector = industrySector as IndustrySector;
 
-    // 3. Mapeamos la dirección
+
     this.legalAddress = new Address(
       legalAddress.street,
       legalAddress.city,
