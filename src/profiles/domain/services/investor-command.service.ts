@@ -3,6 +3,9 @@ import { UploadInvestorPhotoCommand } from '../model/commands/upload-investor-ph
 import { Investor } from '../model/aggregates/investor.aggregate';
 import { CreateInvestorCommand } from '../model/commands/create-investor.command';
 import { CompleteInvestorProfileCommand } from '../model/commands/complete-investor-profile.command';
+import { RequestInvestorDniUploadUrlCommand } from '../model/commands/request-investor-dni-upload-url.command';
+import { RequestInvestorPhotoUploadUrlCommand } from '../model/commands/request-investor-photo-upload-url.command';
+import { UploadUrlResult } from './file-storage.service';
 
 /** @author LiquiLabs */
 export const INVESTOR_COMMAND_SERVICE = 'INVESTOR_COMMAND_SERVICE';
@@ -14,4 +17,10 @@ export interface IInvestorCommandService {
   handleCompleteProfile(
     command: CompleteInvestorProfileCommand,
   ): Promise<Investor>;
+  handleRequestDniUploadUrl(
+    command: RequestInvestorDniUploadUrlCommand,
+  ): Promise<UploadUrlResult>;
+  handleRequestPhotoUploadUrl(
+    command: RequestInvestorPhotoUploadUrlCommand,
+  ): Promise<UploadUrlResult>;
 }

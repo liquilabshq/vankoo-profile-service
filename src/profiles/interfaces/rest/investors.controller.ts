@@ -6,14 +6,18 @@ import {
   Res,
   Inject,
   Patch,
+  Post,
   Get,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { INVESTOR_COMMAND_SERVICE } from '../../domain/services/investor-command.service';
 import { UploadInvestorDniResource } from './resources/upload-investor-dni.resource';
 import { UploadInvestorPhotoResource } from './resources/upload-investor-photo.resource';
+import { RequestUploadUrlResource } from './resources/request-upload-url.resource';
 import { UploadInvestorDniCommandFromResourceAssembler } from './transform/upload-investor-dni-command-from-resource.assembler';
 import { UploadInvestorPhotoCommandFromResourceAssembler } from './transform/upload-investor-photo-command-from-resource.assembler';
+import { RequestInvestorDniUploadUrlCommandFromResourceAssembler } from './transform/request-investor-dni-upload-url-command-from-resource.assembler';
+import { RequestInvestorPhotoUploadUrlCommandFromResourceAssembler } from './transform/request-investor-photo-upload-url-command-from-resource.assembler';
 import { InvestorResourceFromEntityAssembler } from './transform/investor-resource-from-entity.assembler';
 
 // Importaciones para tipado estricto (soluciona el unsafe-assignment)
@@ -103,6 +107,39 @@ export class InvestorsController {
     }
   }
 
+  @Post(':id/dni/upload-url')
+  @ApiOperation({
+    summary:
+      'Solicitar una URL prefirmada para subir el DNI directamente a MinIO',
+  })
+  @ApiParam({ name: 'id', description: 'UUID del Inversor', type: 'string' })
+  @ApiResponse({ status: 200, description: 'URL prefirmada generada' })
+  @ApiResponse({ status: 404, description: 'Inversor no encontrado' })
+  async requestDniUploadUrl(
+    @Param('id') investorId: string,
+    @Body() resource: RequestUploadUrlResource,
+    @Res() res: Response,
+  ) {
+    try {
+      const command =
+        RequestInvestorDniUploadUrlCommandFromResourceAssembler.toCommandFromResource(
+          investorId,
+          resource,
+        );
+      const result =
+        await this.investorCommandService.handleRequestDniUploadUrl(command);
+
+      return res.status(HttpStatus.OK).json(result);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error inesperado';
+      const status = errorMessage.includes('no encontrado')
+        ? HttpStatus.NOT_FOUND
+        : HttpStatus.BAD_REQUEST;
+      return res.status(status).json({ message: errorMessage });
+    }
+  }
+
   @Patch(':id/dni')
   @ApiOperation({ summary: 'Subir documento DNI del Inversor' })
   @ApiParam({ name: 'id', description: 'UUID del Inversor', type: 'string' }) // Ahora sí usamos ApiParam
@@ -130,6 +167,39 @@ export class InvestorsController {
         message: 'DNI subido exitosamente',
         investor: investorResource,
       });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error inesperado';
+      const status = errorMessage.includes('no encontrado')
+        ? HttpStatus.NOT_FOUND
+        : HttpStatus.BAD_REQUEST;
+      return res.status(status).json({ message: errorMessage });
+    }
+  }
+
+  @Post(':id/photo/upload-url')
+  @ApiOperation({
+    summary:
+      'Solicitar una URL prefirmada para subir la foto directamente a MinIO',
+  })
+  @ApiParam({ name: 'id', description: 'UUID del Inversor', type: 'string' })
+  @ApiResponse({ status: 200, description: 'URL prefirmada generada' })
+  @ApiResponse({ status: 404, description: 'Inversor no encontrado' })
+  async requestPhotoUploadUrl(
+    @Param('id') investorId: string,
+    @Body() resource: RequestUploadUrlResource,
+    @Res() res: Response,
+  ) {
+    try {
+      const command =
+        RequestInvestorPhotoUploadUrlCommandFromResourceAssembler.toCommandFromResource(
+          investorId,
+          resource,
+        );
+      const result =
+        await this.investorCommandService.handleRequestPhotoUploadUrl(command);
+
+      return res.status(HttpStatus.OK).json(result);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Error inesperado';

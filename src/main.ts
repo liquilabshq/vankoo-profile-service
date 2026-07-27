@@ -13,7 +13,8 @@ async function bootstrap() {
   // Extraemos el servicio de configuración de forma nativa en NestJS
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT') || 3000;
-  const kafkaBrokers = configService.get<string>('KAFKA_BROKERS') || 'localhost:9092';
+  const kafkaBrokers =
+    configService.get<string>('KAFKA_BROKERS') || 'localhost:9092';
 
   // 1. Configurar prefijo global y Versionamiento
   app.setGlobalPrefix('api');
@@ -34,7 +35,9 @@ async function bootstrap() {
   // 3. Configurar Swagger (OpenAPI)
   const config = new DocumentBuilder()
     .setTitle('Vankoo Profile Service')
-    .setDescription('Microservicio de gestión de perfiles para la plataforma Vankoo')
+    .setDescription(
+      'Microservicio de gestión de perfiles para la plataforma Vankoo',
+    )
     .setVersion('1.0')
     .build();
   const document = SwaggerModule.createDocument(app, config);
@@ -65,7 +68,9 @@ async function bootstrap() {
   await app.startAllMicroservices();
   await app.listen(port);
 
-  logger.log(`🚀 Vankoo Profile Service is running on: http://localhost:${port}`);
+  logger.log(
+    `🚀 Vankoo Profile Service is running on: http://localhost:${port}`,
+  );
   logger.log(`📚 Documentación lista en: http://localhost:${port}/reference`);
   logger.log(`🎧 Conectado a Kafka en el broker: ${kafkaBrokers}`);
 }

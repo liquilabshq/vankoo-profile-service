@@ -6,14 +6,18 @@ import {
   Res,
   Inject,
   Patch,
+  Post,
   Get,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { COMPANY_COMMAND_SERVICE } from '../../domain/services/company-command.service';
 import { UploadCompanyRucResource } from './resources/upload-company-ruc.resource';
 import { UploadCompanyLogoResource } from './resources/upload-company-logo.resource';
+import { RequestUploadUrlResource } from './resources/request-upload-url.resource';
 import { UploadCompanyRucCommandFromResourceAssembler } from './transform/upload-company-ruc-command-from-resource.assembler';
 import { UploadCompanyLogoCommandFromResourceAssembler } from './transform/upload-company-logo-command-from-resource.assembler';
+import { RequestCompanyRucUploadUrlCommandFromResourceAssembler } from './transform/request-company-ruc-upload-url-command-from-resource.assembler';
+import { RequestCompanyLogoUploadUrlCommandFromResourceAssembler } from './transform/request-company-logo-upload-url-command-from-resource.assembler';
 import { CompanyResourceFromEntityAssembler } from './transform/company-resource-from-entity.assembler';
 
 import type { Response } from 'express';
@@ -102,6 +106,39 @@ export class CompaniesController {
     }
   }
 
+  @Post(':id/ruc/upload-url')
+  @ApiOperation({
+    summary:
+      'Solicitar una URL prefirmada para subir el RUC directamente a MinIO',
+  })
+  @ApiParam({ name: 'id', description: 'UUID de la Empresa', type: 'string' })
+  @ApiResponse({ status: 200, description: 'URL prefirmada generada' })
+  @ApiResponse({ status: 404, description: 'Empresa no encontrada' })
+  async requestRucUploadUrl(
+    @Param('id') companyId: string,
+    @Body() resource: RequestUploadUrlResource,
+    @Res() res: Response,
+  ) {
+    try {
+      const command =
+        RequestCompanyRucUploadUrlCommandFromResourceAssembler.toCommandFromResource(
+          companyId,
+          resource,
+        );
+      const result =
+        await this.companyCommandService.handleRequestRucUploadUrl(command);
+
+      return res.status(HttpStatus.OK).json(result);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error inesperado';
+      const status = errorMessage.includes('no encontrada')
+        ? HttpStatus.NOT_FOUND
+        : HttpStatus.BAD_REQUEST;
+      return res.status(status).json({ message: errorMessage });
+    }
+  }
+
   @Patch(':id/ruc')
   @ApiOperation({ summary: 'Subir documento RUC de la Empresa' })
   @ApiParam({ name: 'id', description: 'UUID de la Empresa', type: 'string' })
@@ -125,6 +162,39 @@ export class CompaniesController {
       return res
         .status(HttpStatus.OK)
         .json({ message: 'RUC subido exitosamente', company: companyResource });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error inesperado';
+      const status = errorMessage.includes('no encontrada')
+        ? HttpStatus.NOT_FOUND
+        : HttpStatus.BAD_REQUEST;
+      return res.status(status).json({ message: errorMessage });
+    }
+  }
+
+  @Post(':id/logo/upload-url')
+  @ApiOperation({
+    summary:
+      'Solicitar una URL prefirmada para subir el logo directamente a MinIO',
+  })
+  @ApiParam({ name: 'id', description: 'UUID de la Empresa', type: 'string' })
+  @ApiResponse({ status: 200, description: 'URL prefirmada generada' })
+  @ApiResponse({ status: 404, description: 'Empresa no encontrada' })
+  async requestLogoUploadUrl(
+    @Param('id') companyId: string,
+    @Body() resource: RequestUploadUrlResource,
+    @Res() res: Response,
+  ) {
+    try {
+      const command =
+        RequestCompanyLogoUploadUrlCommandFromResourceAssembler.toCommandFromResource(
+          companyId,
+          resource,
+        );
+      const result =
+        await this.companyCommandService.handleRequestLogoUploadUrl(command);
+
+      return res.status(HttpStatus.OK).json(result);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Error inesperado';

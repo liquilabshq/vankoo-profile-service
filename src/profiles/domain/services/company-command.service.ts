@@ -3,6 +3,9 @@ import { UploadCompanyLogoCommand } from '../model/commands/upload-company-logo.
 import { Company } from '../model/aggregates/company.aggregate';
 import { CreateCompanyCommand } from '../model/commands/create-company.command';
 import { CompleteCompanyProfileCommand } from '../model/commands/complete-company-profile.command';
+import { RequestCompanyRucUploadUrlCommand } from '../model/commands/request-company-ruc-upload-url.command';
+import { RequestCompanyLogoUploadUrlCommand } from '../model/commands/request-company-logo-upload-url.command';
+import { UploadUrlResult } from './file-storage.service';
 
 /**
  * @author LiquiLabs
@@ -16,4 +19,10 @@ export interface ICompanyCommandService {
   handleCompleteProfile(
     command: CompleteCompanyProfileCommand,
   ): Promise<Company>;
+  handleRequestRucUploadUrl(
+    command: RequestCompanyRucUploadUrlCommand,
+  ): Promise<UploadUrlResult>;
+  handleRequestLogoUploadUrl(
+    command: RequestCompanyLogoUploadUrlCommand,
+  ): Promise<UploadUrlResult>;
 }
