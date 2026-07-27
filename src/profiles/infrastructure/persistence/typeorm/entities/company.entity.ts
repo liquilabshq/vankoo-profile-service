@@ -30,8 +30,14 @@ export class CompanyEntity {
   @Column({ name: 'user_id', type: 'uuid' })
   userId: string; // Representa UserId
 
-  @Column({ name: 'ruc_number', length: 11, unique: true, nullable: true })
-  rucNumber: string;
+  @Column({
+    name: 'ruc_number',
+    length: 11,
+    type: 'varchar',
+    unique: true,
+    nullable: true,
+  })
+  rucNumber: string | null;
 
   @Column({ name: 'business_name', nullable: true })
   businessName: string;

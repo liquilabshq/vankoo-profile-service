@@ -72,7 +72,7 @@ export class InvestorRepositoryImpl implements IInvestorRepository {
     entity.contactEmail = investor.contactEmail.address;
 
     // Usamos el optional chaining "?."
-    entity.dni = investor.dni?.value || '';
+    entity.dni = investor.dni?.value ?? null;
     entity.firstName = investor.fullName?.firstName || '';
     entity.lastName = investor.fullName?.lastName || '';
     entity.contactPhone = investor.contactPhone?.value ?? null;
@@ -96,9 +96,6 @@ export class InvestorRepositoryImpl implements IInvestorRepository {
       entity.bankAccount = bankEntity;
     }
 
-    console.log('💾 [DB] Intentando guardar entidad en TypeORM:', entity);
-    await this.typeormRepo.save(entity);
-    console.log('✅ [DB] Guardado completado sin errores.');
     await this.typeormRepo.save(entity);
   }
 }

@@ -22,8 +22,14 @@ export class InvestorEntity {
   @Column({ name: 'user_id', type: 'uuid' })
   userId: string; // Extraído de UserId
 
-  @Column({ name: 'dni_number', length: 8, unique: true })
-  dni: string;
+  @Column({
+    name: 'dni_number',
+    length: 8,
+    type: 'varchar',
+    unique: true,
+    nullable: true,
+  })
+  dni: string | null;
 
   // Aplanamos el Value Object FullName
   @Column({ name: 'first_name' })

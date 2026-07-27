@@ -73,7 +73,7 @@ export class CompanyRepositoryImpl implements ICompanyRepository {
     entity.contactEmail = company.contactEmail.address;
 
     // Usamos el optional chaining "?." para evitar errores si nacieron vacíos
-    entity.rucNumber = company.rucNumber?.value || '';
+    entity.rucNumber = company.rucNumber?.value ?? null;
     entity.businessName = company.businessName?.value || '';
     entity.industrySector = company.industrySector as string;
     entity.contactPhone = company.contactPhone?.value ?? null;
