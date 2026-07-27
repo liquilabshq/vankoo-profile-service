@@ -47,14 +47,12 @@ export class Company {
       country: string;
     },
   ): void {
-
     this.rucNumber = new RucNumber(rucNumber);
     this.businessName = new BusinessName(businessName);
     this.contactPhone = new PhoneNumber(contactPhone);
 
     //Castear el string al Enum
     this.industrySector = industrySector as IndustrySector;
-
 
     this.legalAddress = new Address(
       legalAddress.street,

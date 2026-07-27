@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { ICompanyCommandService } from '../../../domain/services/company-command.service';
 import { UploadCompanyRucCommand } from '../../../domain/model/commands/upload-company-ruc.command';
 import { UploadCompanyLogoCommand } from '../../../domain/model/commands/upload-company-logo.command';
@@ -12,6 +13,20 @@ import { CompanyId } from '../../../domain/model/valueobjects/company-id.vo';
 import { UserId } from '../../../domain/model/valueobjects/user-id.vo';
 import { Email } from '../../../domain/model/valueobjects/email.vo';
 import { CompleteCompanyProfileCommand } from '../../../domain/model/commands/complete-company-profile.command';
+import { RequestCompanyRucUploadUrlCommand } from '../../../domain/model/commands/request-company-ruc-upload-url.command';
+import { RequestCompanyLogoUploadUrlCommand } from '../../../domain/model/commands/request-company-logo-upload-url.command';
+import {
+  FILE_STORAGE_SERVICE,
+  resolveFileExtension,
+} from '../../../domain/services/file-storage.service';
+import type {
+  IFileStorageService,
+  UploadUrlResult,
+} from '../../../domain/services/file-storage.service';
+import { EVENT_PUBLISHER_SERVICE } from '../../../domain/services/event-publisher.service';
+import type { IEventPublisherService } from '../../../domain/services/event-publisher.service';
+
+const PROFILE_EVENTS_TOPIC = 'vankoo.profile.events';
 
 /**
  * @author LiquiLabs
@@ -22,6 +37,12 @@ export class CompanyCommandServiceImpl implements ICompanyCommandService {
   constructor(
     @Inject(COMPANY_REPOSITORY)
     private readonly companyRepository: ICompanyRepository,
+
+    @Inject(FILE_STORAGE_SERVICE)
+    private readonly fileStorageService: IFileStorageService,
+
+    @Inject(EVENT_PUBLISHER_SERVICE)
+    private readonly eventPublisherService: IEventPublisherService,
   ) {}
 
   async handleCompleteProfile(
@@ -35,7 +56,6 @@ export class CompanyCommandServiceImpl implements ICompanyCommandService {
       );
     }
 
-
     company.completeProfile(
       command.rucNumber,
       command.businessName,
@@ -45,6 +65,15 @@ export class CompanyCommandServiceImpl implements ICompanyCommandService {
     );
 
     await this.companyRepository.save(company);
+
+    await this.eventPublisherService.publish(PROFILE_EVENTS_TOPIC, {
+      eventType: 'ProfileCompleted',
+      profileType: 'COMPANY',
+      companyId: company.id.value,
+      userId: company.userId.value,
+      email: company.contactEmail.address,
+    });
+
     return company;
   }
 
@@ -95,5 +124,37 @@ export class CompanyCommandServiceImpl implements ICompanyCommandService {
     await this.companyRepository.save(company);
 
     return company;
+  }
+
+  async handleRequestRucUploadUrl(
+    command: RequestCompanyRucUploadUrlCommand,
+  ): Promise<UploadUrlResult> {
+    const company = await this.companyRepository.findById(command.companyId);
+    if (!company) {
+      throw new NotFoundException(
+        `Empresa con ID ${command.companyId} no encontrada.`,
+      );
+    }
+
+    const extension = resolveFileExtension(command.contentType);
+    const objectKey = `companies/${command.companyId}/ruc/${randomUUID()}.${extension}`;
+
+    return this.fileStorageService.generateUploadUrl(objectKey);
+  }
+
+  async handleRequestLogoUploadUrl(
+    command: RequestCompanyLogoUploadUrlCommand,
+  ): Promise<UploadUrlResult> {
+    const company = await this.companyRepository.findById(command.companyId);
+    if (!company) {
+      throw new NotFoundException(
+        `Empresa con ID ${command.companyId} no encontrada.`,
+      );
+    }
+
+    const extension = resolveFileExtension(command.contentType);
+    const objectKey = `companies/${command.companyId}/logo/${randomUUID()}.${extension}`;
+
+    return this.fileStorageService.generateUploadUrl(objectKey);
   }
 }

@@ -4,6 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 // Infraestructura
 import { CompanyEntity } from './infrastructure/persistence/typeorm/entities/company.entity';
 import { CompanyRepositoryImpl } from './infrastructure/persistence/typeorm/repositories/company.repository.impl';
+import { StorageModule } from './infrastructure/storage/storage.module';
+import { MessagingModule } from './infrastructure/messaging/messaging.module';
 
 // Dominio (Contratos)
 import { COMPANY_REPOSITORY } from './domain/repositories/company.repository';
@@ -22,7 +24,11 @@ import { CompaniesController } from './interfaces/rest/companies.controller';
  * @summary Módulo principal del Bounded Context de Empresas (Companies).
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([CompanyEntity])],
+  imports: [
+    TypeOrmModule.forFeature([CompanyEntity]),
+    StorageModule,
+    MessagingModule,
+  ],
   controllers: [CompaniesController],
   providers: [
     { provide: COMPANY_REPOSITORY, useClass: CompanyRepositoryImpl },

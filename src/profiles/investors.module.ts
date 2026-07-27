@@ -5,6 +5,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { InvestorEntity } from './infrastructure/persistence/typeorm/entities/investor.entity';
 import { BankAccountEntity } from './infrastructure/persistence/typeorm/entities/bank-account.entity';
 import { InvestorRepositoryImpl } from './infrastructure/persistence/typeorm/repositories/investor.repository.impl';
+import { StorageModule } from './infrastructure/storage/storage.module';
+import { MessagingModule } from './infrastructure/messaging/messaging.module';
 
 // Dominio (Contratos)
 import { INVESTOR_REPOSITORY } from './domain/repositories/investor.repository';
@@ -26,6 +28,8 @@ import { InvestorsController } from './interfaces/rest/investors.controller';
   imports: [
     // Importante: Inversores necesita registrar ambas tablas
     TypeOrmModule.forFeature([InvestorEntity, BankAccountEntity]),
+    StorageModule,
+    MessagingModule,
   ],
   controllers: [InvestorsController],
   providers: [
