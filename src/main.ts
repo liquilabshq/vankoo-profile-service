@@ -10,6 +10,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const logger = new Logger('NestApplication');
 
+  // Habilita los hooks de ciclo de vida (OnModuleDestroy) ante SIGINT/SIGTERM,
+  // necesario para que EurekaClientService se desregistre del Discovery Server al apagar el proceso.
+  app.enableShutdownHooks();
+
   // Extraemos el servicio de configuración de forma nativa en NestJS
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT') || 3000;
