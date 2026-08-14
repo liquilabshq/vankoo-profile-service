@@ -5,6 +5,8 @@ import { CreateInvestorCommand } from '../model/commands/create-investor.command
 import { CompleteInvestorProfileCommand } from '../model/commands/complete-investor-profile.command';
 import { RequestInvestorDniUploadUrlCommand } from '../model/commands/request-investor-dni-upload-url.command';
 import { RequestInvestorPhotoUploadUrlCommand } from '../model/commands/request-investor-photo-upload-url.command';
+import { VerifyInvestorKycCommand } from '../model/commands/verify-investor-kyc.command';
+import { RejectInvestorKycCommand } from '../model/commands/reject-investor-kyc.command';
 import { UploadUrlResult } from './file-storage.service';
 
 /** @author LiquiLabs */
@@ -23,4 +25,6 @@ export interface IInvestorCommandService {
   handleRequestPhotoUploadUrl(
     command: RequestInvestorPhotoUploadUrlCommand,
   ): Promise<UploadUrlResult>;
+  handleVerifyKyc(command: VerifyInvestorKycCommand): Promise<Investor>;
+  handleRejectKyc(command: RejectInvestorKycCommand): Promise<Investor>;
 }

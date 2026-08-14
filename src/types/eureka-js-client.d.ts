@@ -1,6 +1,6 @@
 declare module 'eureka-js-client' {
   export interface EurekaPort {
-    '$': number;
+    $: number;
     '@enabled': string;
   }
 

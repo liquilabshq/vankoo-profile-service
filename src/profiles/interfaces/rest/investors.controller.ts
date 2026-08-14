@@ -30,6 +30,9 @@ import type { IInvestorQueryService } from '../../domain/services/investor-query
 import { GetInvestorByIdQuery } from '../../domain/model/queries/get-investor-by-id.query';
 import { CompleteInvestorProfileCommandFromResourceAssembler } from './transform/complete-investor-profile-command-from-resource.assembler';
 import { CompleteInvestorProfileResource } from './resources/complete-investor-profile.resource';
+import { VerifyInvestorKycCommand } from '../../domain/model/commands/verify-investor-kyc.command';
+import { RejectKycResource } from './resources/reject-kyc.resource';
+import { RejectInvestorKycCommandFromResourceAssembler } from './transform/reject-investor-kyc-command-from-resource.assembler';
 
 /** @author LiquiLabs */
 @ApiTags('Investors')
@@ -235,6 +238,68 @@ export class InvestorsController {
 
       return res.status(HttpStatus.OK).json({
         message: 'Foto actualizada exitosamente',
+        investor: investorResource,
+      });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error inesperado';
+      const status = errorMessage.includes('no encontrado')
+        ? HttpStatus.NOT_FOUND
+        : HttpStatus.BAD_REQUEST;
+      return res.status(status).json({ message: errorMessage });
+    }
+  }
+
+  @Patch(':id/kyc/verify')
+  @ApiOperation({ summary: 'Verificar el KYC de un Inversor' })
+  @ApiParam({ name: 'id', description: 'UUID del Inversor', type: 'string' })
+  @ApiResponse({ status: 200, description: 'KYC verificado exitosamente' })
+  @ApiResponse({ status: 404, description: 'Inversor no encontrado' })
+  async verifyKyc(@Param('id') investorId: string, @Res() res: Response) {
+    try {
+      const command = new VerifyInvestorKycCommand(investorId);
+      const investor =
+        await this.investorCommandService.handleVerifyKyc(command);
+      const investorResource =
+        InvestorResourceFromEntityAssembler.toResourceFromEntity(investor);
+
+      return res.status(HttpStatus.OK).json({
+        message: 'KYC verificado exitosamente',
+        investor: investorResource,
+      });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error inesperado';
+      const status = errorMessage.includes('no encontrado')
+        ? HttpStatus.NOT_FOUND
+        : HttpStatus.BAD_REQUEST;
+      return res.status(status).json({ message: errorMessage });
+    }
+  }
+
+  @Patch(':id/kyc/reject')
+  @ApiOperation({ summary: 'Rechazar el KYC de un Inversor' })
+  @ApiParam({ name: 'id', description: 'UUID del Inversor', type: 'string' })
+  @ApiResponse({ status: 200, description: 'KYC rechazado' })
+  @ApiResponse({ status: 404, description: 'Inversor no encontrado' })
+  async rejectKyc(
+    @Param('id') investorId: string,
+    @Body() resource: RejectKycResource,
+    @Res() res: Response,
+  ) {
+    try {
+      const command =
+        RejectInvestorKycCommandFromResourceAssembler.toCommandFromResource(
+          investorId,
+          resource,
+        );
+      const investor =
+        await this.investorCommandService.handleRejectKyc(command);
+      const investorResource =
+        InvestorResourceFromEntityAssembler.toResourceFromEntity(investor);
+
+      return res.status(HttpStatus.OK).json({
+        message: 'KYC rechazado',
         investor: investorResource,
       });
     } catch (error: unknown) {

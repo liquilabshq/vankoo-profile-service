@@ -1,4 +1,5 @@
 import { KycStatus } from '../valueobjects/kyc-status.enum';
+import { KycRejectionReason } from '../valueobjects/kyc-rejection-reason.vo';
 import { DocumentUrl } from '../valueobjects/document-url.vo';
 import { UserId } from '../valueobjects/user-id.vo';
 import { CompanyId } from '../valueobjects/company-id.vo';
@@ -16,6 +17,7 @@ import { SustainabilityStatus } from '../valueobjects/sustainability-status.vo';
  */
 export class Company {
   private kycStatus: KycStatus;
+  private kycRejectionReason?: KycRejectionReason;
   private logoUrl?: DocumentUrl; // Equivalente a la foto de perfil
   private rucDocumentUrl?: DocumentUrl;
 
@@ -31,8 +33,13 @@ export class Company {
     public contactPhone?: PhoneNumber,
     public legalAddress?: Address,
     public sustainabilityStatus?: SustainabilityStatus,
+
+    // 3. Estado de KYC (usado por el repositorio para rehidratar desde persistencia)
+    kycStatus?: KycStatus,
+    kycRejectionReason?: KycRejectionReason,
   ) {
-    this.kycStatus = KycStatus.PENDING;
+    this.kycStatus = kycStatus ?? KycStatus.PENDING;
+    this.kycRejectionReason = kycRejectionReason;
   }
   public completeProfile(
     rucNumber: string,
@@ -64,6 +71,33 @@ export class Company {
 
     // Opcional: Podrías inicializar el status de sostenibilidad por defecto aquí si lo deseas
     // this.sustainabilityStatus = new SustainabilityStatus(false, null);
+  }
+
+  public verifyKyc(): void {
+    this.assertKycIsPending();
+    this.kycStatus = KycStatus.VERIFIED;
+  }
+
+  public rejectKyc(reason: string): void {
+    this.assertKycIsPending();
+    this.kycRejectionReason = new KycRejectionReason(reason);
+    this.kycStatus = KycStatus.REJECTED;
+  }
+
+  private assertKycIsPending(): void {
+    if (this.kycStatus !== KycStatus.PENDING) {
+      throw new Error(
+        `El KYC de este perfil ya fue procesado (estado actual: ${this.kycStatus}).`,
+      );
+    }
+  }
+
+  public getKycStatus(): KycStatus {
+    return this.kycStatus;
+  }
+
+  public getKycRejectionReason(): KycRejectionReason | undefined {
+    return this.kycRejectionReason;
   }
 
   public uploadRucDocument(rucUrl: DocumentUrl): void {

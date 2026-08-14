@@ -5,6 +5,8 @@ export class InvestorResource {
   fullName: string; // Uniremos firstName y lastName para el front
   photoUrl?: string;
   dniDocumentUrl?: string;
+  kycStatus: string;
+  kycRejectionReason?: string;
   bankAccount?: {
     bankName: string;
     accountNumber: string;

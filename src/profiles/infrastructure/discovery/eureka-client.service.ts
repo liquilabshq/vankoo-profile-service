@@ -29,7 +29,7 @@ export class EurekaClientService implements OnModuleInit, OnModuleDestroy {
         app: 'profile-service',
         hostName,
         ipAddr: hostName,
-        port: { '$': port, '@enabled': 'true' },
+        port: { $: port, '@enabled': 'true' },
         vipAddress: 'profile-service',
         statusPageUrl: `http://${hostName}:${port}/`,
         healthCheckUrl: `http://${hostName}:${port}/`,

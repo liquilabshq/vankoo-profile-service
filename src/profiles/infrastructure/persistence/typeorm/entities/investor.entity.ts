@@ -51,6 +51,9 @@ export class InvestorEntity {
   @Column({ name: 'kyc_status', default: 'PENDING' })
   kycStatus: string;
 
+  @Column({ name: 'kyc_rejection_reason', type: 'varchar', nullable: true })
+  kycRejectionReason: string | null;
+
   // URLs de MinIO
   @Column({ name: 'photo_url', type: 'varchar', nullable: true })
   photoUrl: string | null;

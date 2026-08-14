@@ -15,6 +15,8 @@ import { Email } from '../../../domain/model/valueobjects/email.vo';
 import { CompleteInvestorProfileCommand } from '../../../domain/model/commands/complete-investor-profile.command';
 import { RequestInvestorDniUploadUrlCommand } from '../../../domain/model/commands/request-investor-dni-upload-url.command';
 import { RequestInvestorPhotoUploadUrlCommand } from '../../../domain/model/commands/request-investor-photo-upload-url.command';
+import { VerifyInvestorKycCommand } from '../../../domain/model/commands/verify-investor-kyc.command';
+import { RejectInvestorKycCommand } from '../../../domain/model/commands/reject-investor-kyc.command';
 import {
   FILE_STORAGE_SERVICE,
   resolveFileExtension,
@@ -150,5 +152,52 @@ export class InvestorCommandServiceImpl implements IInvestorCommandService {
     const objectKey = `investors/${command.investorId}/photo/${randomUUID()}.${extension}`;
 
     return this.fileStorageService.generateUploadUrl(objectKey);
+  }
+
+  async handleVerifyKyc(command: VerifyInvestorKycCommand): Promise<Investor> {
+    const investor = await this.investorRepository.findById(command.investorId);
+    if (!investor) {
+      throw new NotFoundException(
+        `Inversor con ID ${command.investorId} no encontrado.`,
+      );
+    }
+
+    investor.verifyKyc();
+    await this.investorRepository.save(investor);
+
+    await this.eventPublisherService.publish(PROFILE_EVENTS_TOPIC, {
+      eventType: 'KycVerified',
+      profileType: 'INVESTOR',
+      investorId: investor.id.value,
+      userId: investor.userId.value,
+      email: investor.contactEmail.address,
+      kycStatus: investor.getKycStatus(),
+    });
+
+    return investor;
+  }
+
+  async handleRejectKyc(command: RejectInvestorKycCommand): Promise<Investor> {
+    const investor = await this.investorRepository.findById(command.investorId);
+    if (!investor) {
+      throw new NotFoundException(
+        `Inversor con ID ${command.investorId} no encontrado.`,
+      );
+    }
+
+    investor.rejectKyc(command.reason);
+    await this.investorRepository.save(investor);
+
+    await this.eventPublisherService.publish(PROFILE_EVENTS_TOPIC, {
+      eventType: 'KycRejected',
+      profileType: 'INVESTOR',
+      investorId: investor.id.value,
+      userId: investor.userId.value,
+      email: investor.contactEmail.address,
+      kycStatus: investor.getKycStatus(),
+      reason: investor.getKycRejectionReason()?.value,
+    });
+
+    return investor;
   }
 }

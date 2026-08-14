@@ -62,6 +62,9 @@ export class CompanyEntity {
   @Column({ name: 'kyc_status', default: 'PENDING' })
   kycStatus: string;
 
+  @Column({ name: 'kyc_rejection_reason', type: 'varchar', nullable: true })
+  kycRejectionReason: string | null;
+
   // Enlaces de documentos subidos a MinIO (nacen vacíos/nulos)
   @Column({ name: 'logo_url', type: 'varchar', nullable: true }) //
   logoUrl: string | null;

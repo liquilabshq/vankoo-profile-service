@@ -15,6 +15,8 @@ import { PhoneNumber } from '../../../../domain/model/valueobjects/phone-number.
 import { Address } from '../../../../domain/model/valueobjects/address.vo';
 import { SustainabilityStatus } from '../../../../domain/model/valueobjects/sustainability-status.vo';
 import { DocumentUrl } from '../../../../domain/model/valueobjects/document-url.vo';
+import { KycStatus } from '../../../../domain/model/valueobjects/kyc-status.enum';
+import { KycRejectionReason } from '../../../../domain/model/valueobjects/kyc-rejection-reason.vo';
 
 @Injectable()
 export class CompanyRepositoryImpl implements ICompanyRepository {
@@ -52,6 +54,10 @@ export class CompanyRepositoryImpl implements ICompanyRepository {
             entity.sustainabilityStatus.isGreen,
             entity.sustainabilityStatus.verificationDate ?? undefined,
           )
+        : undefined,
+      entity.kycStatus as KycStatus,
+      entity.kycRejectionReason
+        ? new KycRejectionReason(entity.kycRejectionReason)
         : undefined,
     );
 
@@ -93,6 +99,9 @@ export class CompanyRepositoryImpl implements ICompanyRepository {
 
     entity.logoUrl = company.getLogoUrl()?.url ?? null;
     entity.rucDocumentUrl = company.getRucDocumentUrl()?.url ?? null;
+
+    entity.kycStatus = company.getKycStatus();
+    entity.kycRejectionReason = company.getKycRejectionReason()?.value ?? null;
 
     await this.typeormRepo.save(entity);
   }
