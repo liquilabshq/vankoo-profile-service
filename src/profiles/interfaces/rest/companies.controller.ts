@@ -27,6 +27,9 @@ import type { ICompanyQueryService } from '../../domain/services/company-query.s
 import { GetCompanyByIdQuery } from '../../domain/model/queries/get-company-by-id.query';
 import { CompleteCompanyProfileResource } from './resources/complete-company-profile.resource';
 import { CompleteCompanyProfileCommandFromResourceAssembler } from './transform/complete-company-profile-command-from-resource.assembler';
+import { VerifyCompanyKycCommand } from '../../domain/model/commands/verify-company-kyc.command';
+import { RejectKycResource } from './resources/reject-kyc.resource';
+import { RejectCompanyKycCommandFromResourceAssembler } from './transform/reject-company-kyc-command-from-resource.assembler';
 
 /** @author LiquiLabs */
 @ApiTags('Companies')
@@ -228,6 +231,66 @@ export class CompaniesController {
 
       return res.status(HttpStatus.OK).json({
         message: 'Logo actualizado exitosamente',
+        company: companyResource,
+      });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error inesperado';
+      const status = errorMessage.includes('no encontrada')
+        ? HttpStatus.NOT_FOUND
+        : HttpStatus.BAD_REQUEST;
+      return res.status(status).json({ message: errorMessage });
+    }
+  }
+
+  @Patch(':id/kyc/verify')
+  @ApiOperation({ summary: 'Verificar el KYC de una Empresa' })
+  @ApiParam({ name: 'id', description: 'UUID de la Empresa', type: 'string' })
+  @ApiResponse({ status: 200, description: 'KYC verificado exitosamente' })
+  @ApiResponse({ status: 404, description: 'Empresa no encontrada' })
+  async verifyKyc(@Param('id') companyId: string, @Res() res: Response) {
+    try {
+      const command = new VerifyCompanyKycCommand(companyId);
+      const company = await this.companyCommandService.handleVerifyKyc(command);
+      const companyResource =
+        CompanyResourceFromEntityAssembler.toResourceFromEntity(company);
+
+      return res.status(HttpStatus.OK).json({
+        message: 'KYC verificado exitosamente',
+        company: companyResource,
+      });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error inesperado';
+      const status = errorMessage.includes('no encontrada')
+        ? HttpStatus.NOT_FOUND
+        : HttpStatus.BAD_REQUEST;
+      return res.status(status).json({ message: errorMessage });
+    }
+  }
+
+  @Patch(':id/kyc/reject')
+  @ApiOperation({ summary: 'Rechazar el KYC de una Empresa' })
+  @ApiParam({ name: 'id', description: 'UUID de la Empresa', type: 'string' })
+  @ApiResponse({ status: 200, description: 'KYC rechazado' })
+  @ApiResponse({ status: 404, description: 'Empresa no encontrada' })
+  async rejectKyc(
+    @Param('id') companyId: string,
+    @Body() resource: RejectKycResource,
+    @Res() res: Response,
+  ) {
+    try {
+      const command =
+        RejectCompanyKycCommandFromResourceAssembler.toCommandFromResource(
+          companyId,
+          resource,
+        );
+      const company = await this.companyCommandService.handleRejectKyc(command);
+      const companyResource =
+        CompanyResourceFromEntityAssembler.toResourceFromEntity(company);
+
+      return res.status(HttpStatus.OK).json({
+        message: 'KYC rechazado',
         company: companyResource,
       });
     } catch (error: unknown) {

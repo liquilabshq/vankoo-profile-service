@@ -9,4 +9,6 @@ export class CompanyResource {
   industrySector: string;
   logoUrl?: string;
   rucDocumentUrl?: string;
+  kycStatus: string;
+  kycRejectionReason?: string;
 }

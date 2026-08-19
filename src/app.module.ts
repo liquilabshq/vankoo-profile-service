@@ -7,6 +7,7 @@ import { CompaniesModule } from './profiles/companies.module';
 import { InvestorsModule } from './profiles/investors.module';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { UserRegisteredSubscriber } from './profiles/interfaces/events/user-registered.subscriber';
+import { DiscoveryModule } from './profiles/infrastructure/discovery/discovery.module';
 
 @Module({
   imports: [
@@ -52,6 +53,9 @@ import { UserRegisteredSubscriber } from './profiles/interfaces/events/user-regi
     // 3. Tu Bounded Context
     CompaniesModule,
     InvestorsModule,
+
+    // 4. Descubrimiento de servicios (Eureka)
+    DiscoveryModule,
   ],
   controllers: [AppController, UserRegisteredSubscriber],
   providers: [AppService],

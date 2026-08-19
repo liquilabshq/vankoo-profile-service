@@ -12,6 +12,8 @@ export class InvestorResourceFromEntityAssembler {
         : '',
       photoUrl: entity.getPhotoUrl()?.url,
       dniDocumentUrl: entity.getDniDocumentUrl()?.url,
+      kycStatus: entity.getKycStatus(),
+      kycRejectionReason: entity.getKycRejectionReason()?.value,
       bankAccount: entity.bankAccount
         ? {
             bankName: entity.bankAccount.getBankName(),

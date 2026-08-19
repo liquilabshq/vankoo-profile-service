@@ -11,6 +11,8 @@ export class CompanyResourceFromEntityAssembler {
       industrySector: (entity.industrySector as string) || '',
       logoUrl: entity.getLogoUrl()?.url,
       rucDocumentUrl: entity.getRucDocumentUrl()?.url,
+      kycStatus: entity.getKycStatus(),
+      kycRejectionReason: entity.getKycRejectionReason()?.value,
     };
   }
 }

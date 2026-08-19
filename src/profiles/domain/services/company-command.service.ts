@@ -5,6 +5,8 @@ import { CreateCompanyCommand } from '../model/commands/create-company.command';
 import { CompleteCompanyProfileCommand } from '../model/commands/complete-company-profile.command';
 import { RequestCompanyRucUploadUrlCommand } from '../model/commands/request-company-ruc-upload-url.command';
 import { RequestCompanyLogoUploadUrlCommand } from '../model/commands/request-company-logo-upload-url.command';
+import { VerifyCompanyKycCommand } from '../model/commands/verify-company-kyc.command';
+import { RejectCompanyKycCommand } from '../model/commands/reject-company-kyc.command';
 import { UploadUrlResult } from './file-storage.service';
 
 /**
@@ -25,4 +27,6 @@ export interface ICompanyCommandService {
   handleRequestLogoUploadUrl(
     command: RequestCompanyLogoUploadUrlCommand,
   ): Promise<UploadUrlResult>;
+  handleVerifyKyc(command: VerifyCompanyKycCommand): Promise<Company>;
+  handleRejectKyc(command: RejectCompanyKycCommand): Promise<Company>;
 }

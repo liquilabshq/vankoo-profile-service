@@ -2,8 +2,8 @@
 FROM node:24-alpine AS builder
 WORKDIR /app
 
-# Instalamos pnpm globalmente
-RUN npm install -g pnpm
+# Instalamos pnpm globalmente (versión fijada para que coincida con "packageManager" en package.json)
+RUN npm install -g pnpm@10.30.2
 
 # Copiamos los archivos de dependencias primero (aprovecha la caché)
 COPY package.json pnpm-lock.yaml ./
@@ -21,8 +21,8 @@ RUN pnpm run build
 FROM node:24-alpine
 WORKDIR /app
 
-# Instalamos curl y pnpm como root
-RUN apk add --no-cache curl && npm install -g pnpm
+# Instalamos curl y pnpm como root (versión fijada para que coincida con "packageManager" en package.json)
+RUN apk add --no-cache curl && npm install -g pnpm@10.30.2
 
 # Le damos la propiedad de la carpeta /app al usuario node
 RUN chown -R node:node /app

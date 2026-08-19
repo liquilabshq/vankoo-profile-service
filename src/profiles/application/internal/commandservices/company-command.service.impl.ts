@@ -15,6 +15,8 @@ import { Email } from '../../../domain/model/valueobjects/email.vo';
 import { CompleteCompanyProfileCommand } from '../../../domain/model/commands/complete-company-profile.command';
 import { RequestCompanyRucUploadUrlCommand } from '../../../domain/model/commands/request-company-ruc-upload-url.command';
 import { RequestCompanyLogoUploadUrlCommand } from '../../../domain/model/commands/request-company-logo-upload-url.command';
+import { VerifyCompanyKycCommand } from '../../../domain/model/commands/verify-company-kyc.command';
+import { RejectCompanyKycCommand } from '../../../domain/model/commands/reject-company-kyc.command';
 import {
   FILE_STORAGE_SERVICE,
   resolveFileExtension,
@@ -156,5 +158,52 @@ export class CompanyCommandServiceImpl implements ICompanyCommandService {
     const objectKey = `companies/${command.companyId}/logo/${randomUUID()}.${extension}`;
 
     return this.fileStorageService.generateUploadUrl(objectKey);
+  }
+
+  async handleVerifyKyc(command: VerifyCompanyKycCommand): Promise<Company> {
+    const company = await this.companyRepository.findById(command.companyId);
+    if (!company) {
+      throw new NotFoundException(
+        `Empresa con ID ${command.companyId} no encontrada.`,
+      );
+    }
+
+    company.verifyKyc();
+    await this.companyRepository.save(company);
+
+    await this.eventPublisherService.publish(PROFILE_EVENTS_TOPIC, {
+      eventType: 'KycVerified',
+      profileType: 'COMPANY',
+      companyId: company.id.value,
+      userId: company.userId.value,
+      email: company.contactEmail.address,
+      kycStatus: company.getKycStatus(),
+    });
+
+    return company;
+  }
+
+  async handleRejectKyc(command: RejectCompanyKycCommand): Promise<Company> {
+    const company = await this.companyRepository.findById(command.companyId);
+    if (!company) {
+      throw new NotFoundException(
+        `Empresa con ID ${command.companyId} no encontrada.`,
+      );
+    }
+
+    company.rejectKyc(command.reason);
+    await this.companyRepository.save(company);
+
+    await this.eventPublisherService.publish(PROFILE_EVENTS_TOPIC, {
+      eventType: 'KycRejected',
+      profileType: 'COMPANY',
+      companyId: company.id.value,
+      userId: company.userId.value,
+      email: company.contactEmail.address,
+      kycStatus: company.getKycStatus(),
+      reason: company.getKycRejectionReason()?.value,
+    });
+
+    return company;
   }
 }

@@ -14,6 +14,8 @@ import { Email } from '../../../../domain/model/valueobjects/email.vo';
 import { PhoneNumber } from '../../../../domain/model/valueobjects/phone-number.vo';
 import { Address } from '../../../../domain/model/valueobjects/address.vo';
 import { DocumentUrl } from '../../../../domain/model/valueobjects/document-url.vo';
+import { KycStatus } from '../../../../domain/model/valueobjects/kyc-status.enum';
+import { KycRejectionReason } from '../../../../domain/model/valueobjects/kyc-rejection-reason.vo';
 import { BankAccount } from '../../../../domain/model/entities/bank-account.entity';
 import { BankAccountId } from '../../../../domain/model/valueobjects/bank-account-id.vo';
 
@@ -46,6 +48,10 @@ export class InvestorRepositoryImpl implements IInvestorRepository {
             entity.billingAddress.postalCode,
             entity.billingAddress.country,
           )
+        : undefined,
+      entity.kycStatus as KycStatus,
+      entity.kycRejectionReason
+        ? new KycRejectionReason(entity.kycRejectionReason)
         : undefined,
     );
 
@@ -87,6 +93,9 @@ export class InvestorRepositoryImpl implements IInvestorRepository {
 
     entity.dniDocumentUrl = investor.getDniDocumentUrl()?.url ?? null;
     entity.photoUrl = investor.getPhotoUrl()?.url ?? null;
+
+    entity.kycStatus = investor.getKycStatus();
+    entity.kycRejectionReason = investor.getKycRejectionReason()?.value ?? null;
 
     if (investor.bankAccount) {
       const bankEntity = new BankAccountEntity();

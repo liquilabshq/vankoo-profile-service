@@ -1,4 +1,5 @@
 import { KycStatus } from '../valueobjects/kyc-status.enum';
+import { KycRejectionReason } from '../valueobjects/kyc-rejection-reason.vo';
 import { DocumentUrl } from '../valueobjects/document-url.vo';
 import { BankAccount } from '../entities/bank-account.entity';
 import { UserId } from '../valueobjects/user-id.vo';
@@ -15,6 +16,7 @@ import { PhoneNumber } from '../valueobjects/phone-number.vo';
  */
 export class Investor {
   private kycStatus: KycStatus;
+  private kycRejectionReason?: KycRejectionReason;
   private photoUrl?: DocumentUrl;
   private dniDocumentUrl?: DocumentUrl;
   public bankAccount?: BankAccount;
@@ -30,8 +32,13 @@ export class Investor {
     public fullName?: FullName,
     public contactPhone?: PhoneNumber,
     public billingAddress?: Address,
+
+    // 3. Estado de KYC (usado por el repositorio para rehidratar desde persistencia)
+    kycStatus?: KycStatus,
+    kycRejectionReason?: KycRejectionReason,
   ) {
-    this.kycStatus = KycStatus.PENDING;
+    this.kycStatus = kycStatus ?? KycStatus.PENDING;
+    this.kycRejectionReason = kycRejectionReason;
   }
   public completeProfile(
     dni: string,
@@ -64,7 +71,22 @@ export class Investor {
   }
 
   public verifyKyc(): void {
+    this.assertKycIsPending();
     this.kycStatus = KycStatus.VERIFIED;
+  }
+
+  public rejectKyc(reason: string): void {
+    this.assertKycIsPending();
+    this.kycRejectionReason = new KycRejectionReason(reason);
+    this.kycStatus = KycStatus.REJECTED;
+  }
+
+  private assertKycIsPending(): void {
+    if (this.kycStatus !== KycStatus.PENDING) {
+      throw new Error(
+        `El KYC de este perfil ya fue procesado (estado actual: ${this.kycStatus}).`,
+      );
+    }
   }
 
   public updatePhoto(photoUrl: DocumentUrl): void {
@@ -77,6 +99,10 @@ export class Investor {
 
   public getKycStatus(): KycStatus {
     return this.kycStatus;
+  }
+
+  public getKycRejectionReason(): KycRejectionReason | undefined {
+    return this.kycRejectionReason;
   }
 
   public getDniDocumentUrl(): DocumentUrl | undefined {
