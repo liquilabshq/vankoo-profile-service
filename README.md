@@ -58,14 +58,12 @@ Estas son las variables disponibles:
 | `PROFILE_DB_USER` | Usuario de la base de datos | — |
 | `PROFILE_DB_PASS` | Contraseña de la base de datos | — |
 | `PROFILE_DB_NAME` | Nombre de la base de datos | — |
-| `MINIO_ENDPOINT` | Host del servidor MinIO (S3-compatible) | `localhost` |
-| `MINIO_PORT` | Puerto del servidor MinIO | `9100` |
-| `MINIO_USE_SSL` | `true`/`false`, si la conexión a MinIO usa HTTPS | `false` |
-| `MINIO_ACCESS_KEY` | Access key de MinIO | — |
-| `MINIO_SECRET_KEY` | Secret key de MinIO | — |
-| `MINIO_BUCKET_NAME` | Bucket donde se almacenan los documentos/fotos | `vankoo-profile-documents` |
-| `MINIO_PRESIGNED_EXPIRY_SECONDS` | Segundos de validez de las URLs firmadas de subida | `300` |
-| `MINIO_PUBLIC_URL` *(opcional)* | URL pública base para construir el `fileUrl` final. Si no se define, se calcula a partir de `MINIO_ENDPOINT`/`MINIO_PORT`/`MINIO_USE_SSL` | — |
+| `AWS_REGION` | Región de AWS donde vive el bucket | `us-east-1` |
+| `AWS_S3_BUCKET` | Bucket donde se almacenan los documentos/fotos | `vankoo-profile-documents` |
+| `AWS_ACCESS_KEY_ID` | Access key del usuario IAM con permisos sobre el bucket | — |
+| `AWS_SECRET_ACCESS_KEY` | Secret key del usuario IAM con permisos sobre el bucket | — |
+| `AWS_S3_PRESIGNED_EXPIRY_SECONDS` | Segundos de validez de las URLs firmadas de subida | `300` |
+| `AWS_S3_PUBLIC_URL` *(opcional)* | URL pública base para construir el `fileUrl` final. Si no se define, se calcula como `https://<bucket>.s3.<region>.amazonaws.com` | — |
 
 **Ejemplo de `.env.example`:**
 
@@ -77,14 +75,12 @@ PROFILE_DB_USER=vankoo
 PROFILE_DB_PASS=vankoo
 PROFILE_DB_NAME=vankoo_profiles
 
-# Almacenamiento de archivos (MinIO)
-MINIO_ENDPOINT=localhost
-MINIO_PORT=9100
-MINIO_USE_SSL=false
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
-MINIO_BUCKET_NAME=vankoo-profile-documents
-MINIO_PRESIGNED_EXPIRY_SECONDS=300
+# Almacenamiento de archivos (Amazon S3)
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=vankoo-profile-documents
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_S3_PRESIGNED_EXPIRY_SECONDS=300
 ```
 
 ## Ejecución del Proyecto
@@ -130,7 +126,7 @@ El proyecto incluye un `Dockerfile` multi-stage: una etapa `builder` que instala
 
    El contenedor expone el puerto `3000` (definido en el `Dockerfile` con `EXPOSE 3000`).
 
-> Nota: Este repositorio no incluye aún un `docker-compose.yml` para levantar el servicio junto a sus dependencias (Postgres, MinIO). Si necesitas ese flujo localmente, puedes crear uno que defina los servicios `profile-service`, `postgres` y `minio`, o levantar esas dependencias por separado y apuntar las variables `PROFILE_DB_*` / `MINIO_*` de tu `.env` hacia ellas.
+> Nota: Este repositorio no incluye aún un `docker-compose.yml` para levantar el servicio junto a sus dependencias (Postgres). Si necesitas ese flujo localmente, puedes crear uno que defina los servicios `profile-service` y `postgres`, o levantar esas dependencias por separado y apuntar las variables `PROFILE_DB_*` de tu `.env` hacia ellas. El almacenamiento de archivos usa Amazon S3 directamente (variables `AWS_*`), no requiere un contenedor local.
 
 ## Pruebas (Testing)
 
@@ -199,19 +195,19 @@ src/
 
 ### Patrón de subida de archivos: Presigned URL
 
-Para subir archivos (foto de inversor, DNI, logo de empresa, RUC), el servicio **no recibe el binario del archivo directamente**. En su lugar usa el patrón de **URL prefirmada (presigned URL)** contra MinIO, en dos pasos:
+Para subir archivos (foto de inversor, DNI, logo de empresa, RUC), el servicio **no recibe el binario del archivo directamente**. En su lugar usa el patrón de **URL prefirmada (presigned URL)** contra Amazon S3, en dos pasos:
 
 1. **Solicitar la URL de subida** — `POST /:id/photo/upload-url` (o `/dni/upload-url`, `/logo/upload-url`, `/ruc/upload-url`).
-   El backend (`MinioFileStorageService.generateUploadUrl`, ver [minio-file-storage.service.ts](src/profiles/infrastructure/storage/minio-file-storage.service.ts)) le pide a MinIO una URL temporal firmada con `presignedPutObject`, válida por `MINIO_PRESIGNED_EXPIRY_SECONDS` segundos. La respuesta incluye:
+   El backend (`S3FileStorageService.generateUploadUrl`, ver [s3-file-storage.service.ts](src/profiles/infrastructure/storage/s3-file-storage.service.ts)) le pide a S3 una URL temporal firmada con `getSignedUrl` (AWS SDK v3), válida por `AWS_S3_PRESIGNED_EXPIRY_SECONDS` segundos. La respuesta incluye:
    - `uploadUrl`: URL firmada a la que el cliente debe subir el archivo directamente (por ejemplo, con un `PUT`).
    - `fileUrl`: la URL pública final donde quedará accesible el archivo una vez subido.
    - `expiresInSeconds`: tiempo de validez de `uploadUrl`.
 
-2. **Subir el archivo directamente a MinIO** desde el cliente (frontend/mobile), usando `uploadUrl`. El archivo **no pasa por este microservicio**, lo que evita cargar el backend con el tráfico de los binarios.
+2. **Subir el archivo directamente a S3** desde el cliente (frontend/mobile), usando `uploadUrl`. El archivo **no pasa por este microservicio**, lo que evita cargar el backend con el tráfico de los binarios.
 
 3. **Confirmar la subida** — `POST /:id/photo` (o `/dni`, `/logo`, `/ruc`) enviando el `fileUrl` obtenido en el paso 1. El backend valida la URL (`@IsUrl`) y actualiza el agregado correspondiente (inversor o empresa) con la referencia final.
 
-Este patrón evita exponer las credenciales de MinIO al cliente y mantiene el microservicio desacoplado del tráfico pesado de archivos.
+Este patrón evita exponer las credenciales de AWS al cliente y mantiene el microservicio desacoplado del tráfico pesado de archivos.
 
 ## Estándares de Código
 

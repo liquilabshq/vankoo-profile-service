@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { FILE_STORAGE_SERVICE } from '../../domain/services/file-storage.service';
-import { MinioFileStorageService } from './minio-file-storage.service';
+import { S3FileStorageService } from './s3-file-storage.service';
 
 /**
  * @author LiquiLabs
@@ -8,7 +8,7 @@ import { MinioFileStorageService } from './minio-file-storage.service';
  */
 @Module({
   providers: [
-    { provide: FILE_STORAGE_SERVICE, useClass: MinioFileStorageService },
+    { provide: FILE_STORAGE_SERVICE, useClass: S3FileStorageService },
   ],
   exports: [FILE_STORAGE_SERVICE],
 })
