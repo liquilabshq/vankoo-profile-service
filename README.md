@@ -47,6 +47,42 @@ Copia el archivo de ejemplo `.env.example` a `.env` y ajusta las variables segú
 cp .env.example .env
 ```
 
+El proyecto usa `@nestjs/config` para cargar el archivo `.env` automáticamente al arrancar (`ConfigModule`), por lo que basta con que el archivo exista en la raíz del proyecto antes de ejecutar `pnpm run start` / `start:dev`. No es necesario exportar las variables manualmente en la terminal.
+
+Estas son las variables disponibles:
+
+| Variable | Descripción | Valor por defecto |
+| --- | --- | --- |
+| `PROFILE_DB_HOST` | Host de la base de datos Postgres | — |
+| `PROFILE_DB_PORT` | Puerto de la base de datos Postgres | — |
+| `PROFILE_DB_USER` | Usuario de la base de datos | — |
+| `PROFILE_DB_PASS` | Contraseña de la base de datos | — |
+| `PROFILE_DB_NAME` | Nombre de la base de datos | — |
+| `AWS_REGION` | Región de AWS donde vive el bucket | `us-east-1` |
+| `AWS_S3_BUCKET` | Bucket donde se almacenan los documentos/fotos | `vankoo-profile-documents` |
+| `AWS_ACCESS_KEY_ID` | Access key del usuario IAM con permisos sobre el bucket | — |
+| `AWS_SECRET_ACCESS_KEY` | Secret key del usuario IAM con permisos sobre el bucket | — |
+| `AWS_S3_PRESIGNED_EXPIRY_SECONDS` | Segundos de validez de las URLs firmadas de subida | `300` |
+| `AWS_S3_PUBLIC_URL` *(opcional)* | URL pública base para construir el `fileUrl` final. Si no se define, se calcula como `https://<bucket>.s3.<region>.amazonaws.com` | — |
+
+**Ejemplo de `.env.example`:**
+
+```bash
+# Base de datos (Postgres)
+PROFILE_DB_HOST=localhost
+PROFILE_DB_PORT=5432
+PROFILE_DB_USER=vankoo
+PROFILE_DB_PASS=vankoo
+PROFILE_DB_NAME=vankoo_profiles
+
+# Almacenamiento de archivos (Amazon S3)
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=vankoo-profile-documents
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_S3_PRESIGNED_EXPIRY_SECONDS=300
+```
+
 ## Ejecución del Proyecto
 
 ### Desarrollo
@@ -71,6 +107,26 @@ Para compilar el proyecto y luego ejecutarlo en modo producción:
 pnpm build
 pnpm start:prod
 ```
+
+### Docker
+
+El proyecto incluye un `Dockerfile` multi-stage: una etapa `builder` que instala dependencias y compila el proyecto (`pnpm run build`), y una etapa final ligera (`node:24-alpine`) que solo copia el código ya compilado (`dist`) e instala las dependencias de producción.
+
+1. Construir la imagen:
+
+   ```bash
+   docker build -t vankoo-profile-service .
+   ```
+
+2. Ejecutar el contenedor, pasando las variables de entorno desde tu `.env` local:
+
+   ```bash
+   docker run --env-file .env -p 3000:3000 vankoo-profile-service
+   ```
+
+   El contenedor expone el puerto `3000` (definido en el `Dockerfile` con `EXPOSE 3000`).
+
+> Nota: Este repositorio no incluye aún un `docker-compose.yml` para levantar el servicio junto a sus dependencias (Postgres). Si necesitas ese flujo localmente, puedes crear uno que defina los servicios `profile-service` y `postgres`, o levantar esas dependencias por separado y apuntar las variables `PROFILE_DB_*` de tu `.env` hacia ellas. El almacenamiento de archivos usa Amazon S3 directamente (variables `AWS_*`), no requiere un contenedor local.
 
 ## Pruebas (Testing)
 
@@ -136,6 +192,22 @@ src/
 ├── app.module.ts
 └── main.ts
 ```
+
+### Patrón de subida de archivos: Presigned URL
+
+Para subir archivos (foto de inversor, DNI, logo de empresa, RUC), el servicio **no recibe el binario del archivo directamente**. En su lugar usa el patrón de **URL prefirmada (presigned URL)** contra Amazon S3, en dos pasos:
+
+1. **Solicitar la URL de subida** — `POST /:id/photo/upload-url` (o `/dni/upload-url`, `/logo/upload-url`, `/ruc/upload-url`).
+   El backend (`S3FileStorageService.generateUploadUrl`, ver [s3-file-storage.service.ts](src/profiles/infrastructure/storage/s3-file-storage.service.ts)) le pide a S3 una URL temporal firmada con `getSignedUrl` (AWS SDK v3), válida por `AWS_S3_PRESIGNED_EXPIRY_SECONDS` segundos. La respuesta incluye:
+   - `uploadUrl`: URL firmada a la que el cliente debe subir el archivo directamente (por ejemplo, con un `PUT`).
+   - `fileUrl`: la URL pública final donde quedará accesible el archivo una vez subido.
+   - `expiresInSeconds`: tiempo de validez de `uploadUrl`.
+
+2. **Subir el archivo directamente a S3** desde el cliente (frontend/mobile), usando `uploadUrl`. El archivo **no pasa por este microservicio**, lo que evita cargar el backend con el tráfico de los binarios.
+
+3. **Confirmar la subida** — `POST /:id/photo` (o `/dni`, `/logo`, `/ruc`) enviando el `fileUrl` obtenido en el paso 1. El backend valida la URL (`@IsUrl`) y actualiza el agregado correspondiente (inversor o empresa) con la referencia final.
+
+Este patrón evita exponer las credenciales de AWS al cliente y mantiene el microservicio desacoplado del tráfico pesado de archivos.
 
 ## Estándares de Código
 
