@@ -158,10 +158,10 @@ Then el logo queda asociado al perfil de la empresa
 **Relacionado:** `POST /api/v1/companies/{id}/logo/upload-url` + `PATCH /api/v1/companies/{id}/logo`
 **Estado:** Implementado.
 
-### HT-03 — Generar URLs prefirmadas para subida directa a MinIO
+### HT-03 — Generar URLs prefirmadas para subida directa a Amazon S3
 **Tipo:** Historia Técnica
 
-**Como** equipo de desarrollo, **quiero** generar URLs prefirmadas de un solo uso y con expiración corta para cada archivo a subir, **para** que la aplicación cliente pueda escribir directamente en MinIO sin que profile-service procese el peso del archivo ni exponga las credenciales reales de almacenamiento.
+**Como** equipo de desarrollo, **quiero** generar URLs prefirmadas de un solo uso y con expiración corta para cada archivo a subir, **para** que la aplicación cliente pueda escribir directamente en Amazon S3 sin que profile-service procese el peso del archivo ni exponga las credenciales reales de almacenamiento.
 
 **Criterios de aceptación:**
 ```gherkin
@@ -172,17 +172,17 @@ And la URL solo permite escribir en esa ruta específica, no en cualquier otra d
 And si el perfil no existe, se devuelve un error 404
 And si el tipo de contenido no está soportado, se devuelve un error de validación
 ```
-**Relacionado:** puerto `IFileStorageService`, adaptador `MinioFileStorageService`, endpoints `POST .../upload-url`.
+**Relacionado:** puerto `IFileStorageService`, adaptador `S3FileStorageService`, endpoints `POST .../upload-url`.
 **Estado:** Implementado.
 
 ### HT-04 — Confirmar y persistir la referencia del documento subido
 **Tipo:** Historia Técnica
 
-**Como** equipo de desarrollo, **quiero** un mecanismo para registrar la URL final de un archivo una vez que ya fue subido a MinIO, **para** que el perfil quede actualizado solo cuando el archivo realmente existe en el almacenamiento, evitando referencias rotas.
+**Como** equipo de desarrollo, **quiero** un mecanismo para registrar la URL final de un archivo una vez que ya fue subido a Amazon S3, **para** que el perfil quede actualizado solo cuando el archivo realmente existe en el almacenamiento, evitando referencias rotas.
 
 **Criterios de aceptación:**
 ```gherkin
-Given un perfil existente y la URL final de un archivo ya subido a MinIO
+Given un perfil existente y la URL final de un archivo ya subido a Amazon S3
 When se confirma esa URL contra el perfil correspondiente
 Then la URL queda persistida como referencia del documento en el perfil
 And si el perfil no existe, se devuelve un error 404
