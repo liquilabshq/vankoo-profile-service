@@ -220,6 +220,23 @@ Para subir archivos (foto de inversor, DNI, logo de empresa, RUC), el servicio *
 
 Este patrón evita exponer las credenciales de almacenamiento al cliente y mantiene el microservicio desacoplado del tráfico pesado de archivos.
 
+### La empresa de quien llama: `/companies/me`
+
+El gateway solo rutea `/profile/api/v1/companies/me/**`, con JWT, y reenvía el id del usuario en `X-User-Id`. Estas rutas buscan la empresa por ese `userId` (`findByUserId`), así que cada usuario solo ve y cambia la suya. Las rutas por `:id` siguen existiendo para uso interno, pero el gateway no las expone.
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| GET | `/api/v1/companies/me` | La empresa, con `profileComplete` y el estado del certificado verde (`sustainability`) |
+| PATCH | `/api/v1/companies/me/profile` | Completar el perfil |
+| POST | `/api/v1/companies/me/sustainability-certificate/upload-url` | URL prefirmada para el certificado (PDF, JPG o PNG) |
+| PUT | `/api/v1/companies/me/sustainability-certificate` | Registrar el certificado ya subido (`fileUrl`): queda `UNDER_REVIEW` |
+
+### El certificado verde
+
+La empresa sube su certificado ambiental (ISO 14001 o ISO 50001) con el mismo patrón de URL prefirmada. Al registrarlo, el perfil pasa a `UNDER_REVIEW` y Profile publica `SustainabilityCertificateSubmitted`. El **risk-service** lo lee con IA, lo comprueba contra SUNAT y OEFA y responde `GreenCertificationIssued`. Profile guarda entonces el estado (`GREEN` o `NOT_GREEN`), la norma, el emisor, la vigencia y cada criterio con su motivo. Quien decide es el risk-service, no Profile. Contrato en [docs/contracts/profile-events.md](docs/contracts/profile-events.md).
+
+Requiere el perfil completo (RUC y razón social), porque el risk-service compara el titular del certificado con la razón social de SUNAT.
+
 ## Estándares de Código
 
 ### Estilo
