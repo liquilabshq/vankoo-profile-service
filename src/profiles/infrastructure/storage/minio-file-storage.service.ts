@@ -4,6 +4,7 @@ import * as Minio from 'minio';
 import {
   IFileStorageService,
   UploadUrlResult,
+  objectKeyFromUrl,
 } from '../../domain/services/file-storage.service';
 
 /**
@@ -122,5 +123,9 @@ export class MinioFileStorageService
       fileUrl: `${this.publicBaseUrl}/${objectKey}`,
       expiresInSeconds: this.expiryInSeconds,
     };
+  }
+
+  resolveObjectKey(fileUrl: string): string | null {
+    return objectKeyFromUrl(this.publicBaseUrl, fileUrl);
   }
 }

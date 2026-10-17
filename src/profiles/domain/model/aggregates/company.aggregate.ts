@@ -9,7 +9,10 @@ import { IndustrySector } from '../valueobjects/industry-sector.enum';
 import { Email } from '../valueobjects/email.vo';
 import { PhoneNumber } from '../valueobjects/phone-number.vo';
 import { Address } from '../valueobjects/address.vo';
-import { SustainabilityStatus } from '../valueobjects/sustainability-status.vo';
+import {
+  SustainabilityCertification,
+  SustainabilityDecision,
+} from '../valueobjects/sustainability-certification.vo';
 
 /**
  * @author LiquiLabs
@@ -32,7 +35,7 @@ export class Company {
     public industrySector?: IndustrySector,
     public contactPhone?: PhoneNumber,
     public legalAddress?: Address,
-    public sustainabilityStatus?: SustainabilityStatus,
+    public sustainabilityCertification: SustainabilityCertification = SustainabilityCertification.none(),
 
     // 3. Estado de KYC (usado por el repositorio para rehidratar desde persistencia)
     kycStatus?: KycStatus,
@@ -68,9 +71,52 @@ export class Company {
       legalAddress.postalCode,
       legalAddress.country,
     );
+  }
 
-    // Opcional: Podrías inicializar el status de sostenibilidad por defecto aquí si lo deseas
-    // this.sustainabilityStatus = new SustainabilityStatus(false, null);
+  /** Si la empresa ya dio todos los datos que pide completar el perfil. */
+  public isProfileComplete(): boolean {
+    return Boolean(
+      this.rucNumber &&
+      this.businessName &&
+      this.industrySector &&
+      this.contactPhone &&
+      this.legalAddress,
+    );
+  }
+
+  /**
+   * La empresa sube su certificado ambiental. Hace falta el RUC y la razón social:
+   * el risk-service compara el titular del certificado con lo que SUNAT tiene para ese RUC.
+   */
+  public submitSustainabilityCertificate(
+    objectKey: string,
+    submissionId: string,
+    submittedAt: Date,
+  ): void {
+    if (!this.rucNumber || !this.businessName) {
+      throw new Error(
+        'Completa el perfil (RUC y razón social) antes de subir el certificado.',
+      );
+    }
+    this.sustainabilityCertification = SustainabilityCertification.submitted(
+      this.id.value,
+      submissionId,
+      objectKey,
+      submittedAt,
+    );
+  }
+
+  /**
+   * Guarda la decisión del risk-service. Devuelve false si era sobre una subida
+   * anterior: la empresa ya subió otro certificado y esa respuesta no vale.
+   */
+  public recordSustainabilityDecision(
+    decision: SustainabilityDecision,
+  ): boolean {
+    const decided = this.sustainabilityCertification.decide(decision);
+    if (!decided) return false;
+    this.sustainabilityCertification = decided;
+    return true;
   }
 
   public verifyKyc(): void {
