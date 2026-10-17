@@ -7,6 +7,7 @@ import { CompaniesModule } from './profiles/companies.module';
 import { InvestorsModule } from './profiles/investors.module';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { UserRegisteredSubscriber } from './profiles/interfaces/events/user-registered.subscriber';
+import { GreenCertificationIssuedSubscriber } from './profiles/interfaces/events/green-certification-issued.subscriber';
 import { DiscoveryModule } from './profiles/infrastructure/discovery/discovery.module';
 
 @Module({
@@ -57,7 +58,11 @@ import { DiscoveryModule } from './profiles/infrastructure/discovery/discovery.m
     // 4. Descubrimiento de servicios (Eureka)
     DiscoveryModule,
   ],
-  controllers: [AppController, UserRegisteredSubscriber],
+  controllers: [
+    AppController,
+    UserRegisteredSubscriber,
+    GreenCertificationIssuedSubscriber,
+  ],
   providers: [AppService],
 })
 export class AppModule {}
