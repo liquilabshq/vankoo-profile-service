@@ -9,6 +9,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
   IFileStorageService,
   UploadUrlResult,
+  objectKeyFromUrl,
 } from '../../domain/services/file-storage.service';
 
 /**
@@ -80,5 +81,9 @@ export class S3FileStorageService implements IFileStorageService, OnModuleInit {
       fileUrl: `${this.publicBaseUrl}/${objectKey}`,
       expiresInSeconds: this.expiryInSeconds,
     };
+  }
+
+  resolveObjectKey(fileUrl: string): string | null {
+    return objectKeyFromUrl(this.publicBaseUrl, fileUrl);
   }
 }

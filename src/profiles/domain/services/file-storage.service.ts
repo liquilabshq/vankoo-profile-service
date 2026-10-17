@@ -9,6 +9,22 @@ export interface UploadUrlResult {
 
 export interface IFileStorageService {
   generateUploadUrl(objectKey: string): Promise<UploadUrlResult>;
+  /**
+   * La clave del objeto si la URL es de este almacenamiento (la que devolvió
+   * generateUploadUrl como fileUrl), o null si apunta a otro sitio.
+   */
+  resolveObjectKey(fileUrl: string): string | null;
+}
+
+/** Quita la base pública de una URL de este almacenamiento; null si no empieza por ella. */
+export function objectKeyFromUrl(
+  publicBaseUrl: string,
+  fileUrl: string,
+): string | null {
+  const base = publicBaseUrl.replace(/\/+$/, '') + '/';
+  if (!fileUrl.startsWith(base)) return null;
+  const key = fileUrl.slice(base.length);
+  return key && !key.includes('..') && !key.includes('?') ? key : null;
 }
 
 const CONTENT_TYPE_EXTENSIONS: Record<string, string> = {

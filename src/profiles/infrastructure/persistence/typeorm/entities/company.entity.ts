@@ -13,9 +13,39 @@ export class AddressEmbeddable {
 }
 
 export class SustainabilityEmbeddable {
+  // is_green y verification_date se mantienen (derivados del estado) para no romper la columna previa.
   @Column({ name: 'is_green', default: false }) isGreen: boolean;
   @Column({ name: 'verification_date', type: 'timestamp', nullable: true })
   verificationDate: Date | null;
+  @Column({ name: 'status', type: 'varchar', length: 20, default: 'NONE' })
+  status: string;
+  @Column({ name: 'submission_id', type: 'uuid', nullable: true })
+  submissionId: string | null;
+  @Column({ name: 'object_key', type: 'varchar', nullable: true })
+  objectKey: string | null;
+  @Column({ name: 'content_type', type: 'varchar', length: 40, nullable: true })
+  contentType: string | null;
+  @Column({ name: 'submitted_at', type: 'timestamptz', nullable: true })
+  submittedAt: Date | null;
+  @Column({
+    name: 'certification_id',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  certificationId: string | null;
+  @Column({ name: 'standard', type: 'varchar', length: 20, nullable: true })
+  standard: string | null;
+  @Column({ name: 'issuer', type: 'varchar', length: 300, nullable: true })
+  issuer: string | null;
+  @Column({ name: 'valid_until', type: 'date', nullable: true })
+  validUntil: string | null;
+  @Column({ name: 'criteria', type: 'jsonb', default: () => "'[]'" })
+  criteria: { code: string; passed: boolean; detail: string }[];
+  @Column({ name: 'reason_codes', type: 'jsonb', default: () => "'[]'" })
+  reasonCodes: string[];
+  @Column({ name: 'decided_at', type: 'timestamptz', nullable: true })
+  decidedAt: Date | null;
 }
 
 /**
@@ -55,7 +85,7 @@ export class CompanyEntity {
   @Column(() => AddressEmbeddable, { prefix: 'legal_address' })
   legalAddress: AddressEmbeddable;
 
-  // 👇 Aplana la sostenibilidad en 2 columnas (sustainability_is_green, etc.)
+  // 👇 Aplana la sostenibilidad en columnas (sustainability_is_green, sustainability_status, etc.)
   @Column(() => SustainabilityEmbeddable, { prefix: 'sustainability' })
   sustainabilityStatus: SustainabilityEmbeddable;
 

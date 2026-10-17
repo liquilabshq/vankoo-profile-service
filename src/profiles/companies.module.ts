@@ -18,6 +18,7 @@ import { CompanyQueryServiceImpl } from './application/internal/queryservices/co
 
 // Interfaces (REST)
 import { CompaniesController } from './interfaces/rest/companies.controller';
+import { CompanyMeController } from './interfaces/rest/company-me.controller';
 
 /**
  * @author LiquiLabs
@@ -29,7 +30,8 @@ import { CompaniesController } from './interfaces/rest/companies.controller';
     StorageModule,
     MessagingModule,
   ],
-  controllers: [CompaniesController],
+  // CompanyMeController va primero: si no, GET companies/:id atraparía companies/me.
+  controllers: [CompanyMeController, CompaniesController],
   providers: [
     { provide: COMPANY_REPOSITORY, useClass: CompanyRepositoryImpl },
     { provide: COMPANY_COMMAND_SERVICE, useClass: CompanyCommandServiceImpl },

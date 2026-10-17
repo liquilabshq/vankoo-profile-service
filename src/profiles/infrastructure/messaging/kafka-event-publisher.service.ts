@@ -42,11 +42,12 @@ export class KafkaEventPublisherService
   async publish(
     topic: string,
     payload: Record<string, unknown>,
+    key?: string,
   ): Promise<void> {
     try {
       await this.producer.send({
         topic,
-        messages: [{ value: JSON.stringify(payload) }],
+        messages: [{ key, value: JSON.stringify(payload) }],
       });
     } catch (error) {
       this.logger.error(

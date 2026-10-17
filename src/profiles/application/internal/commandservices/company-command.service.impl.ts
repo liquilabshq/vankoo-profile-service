@@ -27,8 +27,13 @@ import type {
 } from '../../../domain/services/file-storage.service';
 import { EVENT_PUBLISHER_SERVICE } from '../../../domain/services/event-publisher.service';
 import type { IEventPublisherService } from '../../../domain/services/event-publisher.service';
+import { RequestSustainabilityCertificateUploadUrlCommand } from '../../../domain/model/commands/request-sustainability-certificate-upload-url.command';
+import { SubmitSustainabilityCertificateCommand } from '../../../domain/model/commands/submit-sustainability-certificate.command';
+import { RecordSustainabilityDecisionCommand } from '../../../domain/model/commands/record-sustainability-decision.command';
 
 const PROFILE_EVENTS_TOPIC = 'vankoo.profile.events';
+/** Versión del evento SustainabilityCertificateSubmitted: ver docs/contracts/profile-events.md. */
+const CERTIFICATE_SUBMITTED_SCHEMA_VERSION = 1;
 
 /**
  * @author LiquiLabs
@@ -204,6 +209,88 @@ export class CompanyCommandServiceImpl implements ICompanyCommandService {
       reason: company.getKycRejectionReason()?.value,
     });
 
+    return company;
+  }
+
+  async handleRequestSustainabilityCertificateUploadUrl(
+    command: RequestSustainabilityCertificateUploadUrlCommand,
+  ): Promise<UploadUrlResult> {
+    const company = await this.companyRepository.findById(command.companyId);
+    if (!company) {
+      throw new NotFoundException(
+        `Empresa con ID ${command.companyId} no encontrada.`,
+      );
+    }
+
+    const extension = resolveFileExtension(command.contentType);
+    const objectKey = `companies/${command.companyId}/sustainability/${randomUUID()}.${extension}`;
+
+    return this.fileStorageService.generateUploadUrl(objectKey);
+  }
+
+  async handleSubmitSustainabilityCertificate(
+    command: SubmitSustainabilityCertificateCommand,
+  ): Promise<Company> {
+    const company = await this.companyRepository.findById(command.companyId);
+    if (!company) {
+      throw new NotFoundException(
+        `Empresa con ID ${command.companyId} no encontrada.`,
+      );
+    }
+
+    // Solo una URL de nuestro propio almacenamiento: el risk-service descargará esa clave.
+    const objectKey = this.fileStorageService.resolveObjectKey(command.fileUrl);
+    if (!objectKey) {
+      throw new Error(
+        'La URL del certificado no pertenece al almacenamiento de Vankoo.',
+      );
+    }
+
+    const submittedAt = new Date();
+    company.submitSustainabilityCertificate(
+      objectKey,
+      randomUUID(),
+      submittedAt,
+    );
+    await this.companyRepository.save(company);
+
+    const certification = company.sustainabilityCertification;
+    await this.eventPublisherService.publish(
+      PROFILE_EVENTS_TOPIC,
+      {
+        eventId: randomUUID(),
+        eventType: 'SustainabilityCertificateSubmitted',
+        schemaVersion: CERTIFICATE_SUBMITTED_SCHEMA_VERSION,
+        occurredAt: submittedAt.toISOString(),
+        profileType: 'COMPANY',
+        companyId: company.id.value,
+        userId: company.userId.value,
+        submissionId: certification.submissionId,
+        rucNumber: company.rucNumber?.value,
+        businessName: company.businessName?.value,
+        objectKey: certification.objectKey,
+        contentType: certification.contentType,
+      },
+      company.id.value,
+    );
+
+    return company;
+  }
+
+  async handleRecordSustainabilityDecision(
+    command: RecordSustainabilityDecisionCommand,
+  ): Promise<Company | null> {
+    const company = await this.companyRepository.findById(command.companyId);
+    if (!company) {
+      throw new NotFoundException(
+        `Empresa con ID ${command.companyId} no encontrada.`,
+      );
+    }
+
+    if (!company.recordSustainabilityDecision(command.decision)) {
+      return null;
+    }
+    await this.companyRepository.save(company);
     return company;
   }
 }
