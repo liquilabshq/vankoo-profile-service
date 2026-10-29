@@ -8,6 +8,7 @@ import { InvestorsModule } from './profiles/investors.module';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { UserRegisteredSubscriber } from './profiles/interfaces/events/user-registered.subscriber';
 import { GreenCertificationIssuedSubscriber } from './profiles/interfaces/events/green-certification-issued.subscriber';
+import { CompanyVerificationIssuedSubscriber } from './profiles/interfaces/events/company-verification-issued.subscriber';
 import { DiscoveryModule } from './profiles/infrastructure/discovery/discovery.module';
 
 @Module({
@@ -62,6 +63,7 @@ import { DiscoveryModule } from './profiles/infrastructure/discovery/discovery.m
     AppController,
     UserRegisteredSubscriber,
     GreenCertificationIssuedSubscriber,
+    CompanyVerificationIssuedSubscriber,
   ],
   providers: [AppService],
 })

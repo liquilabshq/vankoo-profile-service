@@ -48,6 +48,39 @@ export class SustainabilityEmbeddable {
   decidedAt: Date | null;
 }
 
+/** La revisión del KYC: la solicitud vigente, la última decisión del risk-service y la espera. */
+export class KycReviewEmbeddable {
+  @Column({ name: 'request_id', type: 'uuid', nullable: true })
+  requestId: string | null;
+  @Column({ name: 'ruc_document_key', type: 'varchar', nullable: true })
+  rucDocumentKey: string | null;
+  @Column({ name: 'submitted_at', type: 'timestamptz', nullable: true })
+  submittedAt: Date | null;
+  @Column({
+    name: 'verification_id',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  verificationId: string | null;
+  @Column({ name: 'decision', type: 'varchar', length: 30, nullable: true })
+  decision: string | null;
+  @Column({ name: 'checks', type: 'jsonb', default: () => "'[]'" })
+  checks: { code: string; passed: boolean; detail: string }[];
+  @Column({ name: 'reason_codes', type: 'jsonb', default: () => "'[]'" })
+  reasonCodes: string[];
+  @Column({ name: 'field_errors', type: 'jsonb', default: () => "'[]'" })
+  fieldErrors: { field: string; code: string }[];
+  @Column({ name: 'evidence', type: 'jsonb', default: () => "'[]'" })
+  evidence: { code: string; detail: string }[];
+  @Column({ name: 'demo', default: false }) demo: boolean;
+  @Column({ name: 'decided_at', type: 'timestamptz', nullable: true })
+  decidedAt: Date | null;
+  @Column({ name: 'attempts', type: 'int', default: 0 }) attempts: number;
+  @Column({ name: 'retry_available_at', type: 'timestamptz', nullable: true })
+  retryAvailableAt: Date | null;
+}
+
 /**
  * @author LiquiLabs
  * @summary Entidad de infraestructura para persistir Company en PostgreSQL.
@@ -94,6 +127,10 @@ export class CompanyEntity {
 
   @Column({ name: 'kyc_rejection_reason', type: 'varchar', nullable: true })
   kycRejectionReason: string | null;
+
+  // Aplana la revisión del KYC en columnas (kyc_request_id, kyc_checks, etc.)
+  @Column(() => KycReviewEmbeddable, { prefix: 'kyc' })
+  kycReview: KycReviewEmbeddable;
 
   // Enlaces de documentos subidos a MinIO (nacen vacíos/nulos)
   @Column({ name: 'logo_url', type: 'varchar', nullable: true }) //

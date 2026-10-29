@@ -20,6 +20,21 @@ export class SustainabilityCertificationResource {
   decidedAt?: string;
 }
 
+/** @author LiquiLabs */
+export class KycReviewResource {
+  status: string;
+  submittedAt?: string;
+  decidedAt?: string;
+  checks: SustainabilityCriterionResource[];
+  reasonCodes: string[];
+  fieldErrors: { field: string; code: string }[];
+  evidence: { code: string; detail: string }[];
+  /** La ficha la firmó la CA de demostración de Vankoo, no SUNAT: mostrarlo aparte. */
+  demo: boolean;
+  attempts: number;
+  retryAvailableAt?: string;
+}
+
 /**
  * @author LiquiLabs
  * @summary La empresa de quien llama (GET /companies/me): lo de CompanyResource más
@@ -37,4 +52,5 @@ export class CompanyProfileResource extends CompanyResource {
   };
   profileComplete: boolean;
   sustainability: SustainabilityCertificationResource;
+  kyc: KycReviewResource;
 }

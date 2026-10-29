@@ -10,6 +10,9 @@ import { RejectCompanyKycCommand } from '../model/commands/reject-company-kyc.co
 import { RequestSustainabilityCertificateUploadUrlCommand } from '../model/commands/request-sustainability-certificate-upload-url.command';
 import { SubmitSustainabilityCertificateCommand } from '../model/commands/submit-sustainability-certificate.command';
 import { RecordSustainabilityDecisionCommand } from '../model/commands/record-sustainability-decision.command';
+import { SubmitCompanyForVerificationCommand } from '../model/commands/submit-company-for-verification.command';
+import { RecordCompanyVerificationCommand } from '../model/commands/record-company-verification.command';
+import { UpdateCompanyContactCommand } from '../model/commands/update-company-contact.command';
 import { UploadUrlResult } from './file-storage.service';
 
 /**
@@ -41,4 +44,11 @@ export interface ICompanyCommandService {
   handleRecordSustainabilityDecision(
     command: RecordSustainabilityDecisionCommand,
   ): Promise<Company | null>;
+  handleSubmitForVerification(
+    command: SubmitCompanyForVerificationCommand,
+  ): Promise<Company>;
+  handleRecordVerification(
+    command: RecordCompanyVerificationCommand,
+  ): Promise<Company | null>;
+  handleUpdateContact(command: UpdateCompanyContactCommand): Promise<Company>;
 }

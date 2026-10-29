@@ -18,13 +18,19 @@ import { COMPANY_QUERY_SERVICE } from '../../domain/services/company-query.servi
 import type { ICompanyQueryService } from '../../domain/services/company-query.service';
 import { GetCompanyByUserIdQuery } from '../../domain/model/queries/get-company-by-user-id.query';
 import { Company } from '../../domain/model/aggregates/company.aggregate';
-import { CompleteCompanyProfileResource } from './resources/complete-company-profile.resource';
+import { SubmitCompanyProfileResource } from './resources/submit-company-profile.resource';
+import { UpdateCompanyContactResource } from './resources/update-company-contact.resource';
+import { UploadCompanyLogoResource } from './resources/upload-company-logo.resource';
 import { RequestUploadUrlResource } from './resources/request-upload-url.resource';
 import { SubmitSustainabilityCertificateResource } from './resources/submit-sustainability-certificate.resource';
-import { CompleteCompanyProfileCommandFromResourceAssembler } from './transform/complete-company-profile-command-from-resource.assembler';
 import { CompanyProfileResourceFromEntityAssembler } from './transform/company-profile-resource-from-entity.assembler';
 import { RequestSustainabilityCertificateUploadUrlCommand } from '../../domain/model/commands/request-sustainability-certificate-upload-url.command';
 import { SubmitSustainabilityCertificateCommand } from '../../domain/model/commands/submit-sustainability-certificate.command';
+import { SubmitCompanyForVerificationCommand } from '../../domain/model/commands/submit-company-for-verification.command';
+import { UpdateCompanyContactCommand } from '../../domain/model/commands/update-company-contact.command';
+import { RequestCompanyRucUploadUrlCommand } from '../../domain/model/commands/request-company-ruc-upload-url.command';
+import { RequestCompanyLogoUploadUrlCommand } from '../../domain/model/commands/request-company-logo-upload-url.command';
+import { UploadCompanyLogoCommand } from '../../domain/model/commands/upload-company-logo.command';
 
 /** El gateway valida el JWT y reenvía el id del usuario en esta cabecera. */
 const USER_ID_HEADER = 'x-user-id';
@@ -79,19 +85,122 @@ export class CompanyMeController {
   }
 
   @Patch('profile')
-  @ApiOperation({ summary: 'Completar los datos de la empresa del usuario' })
-  async completeProfile(
+  @ApiOperation({
+    summary:
+      'Enviar los datos y la ficha RUC para verificar la empresa: queda en revisión hasta que responda el risk-service',
+  })
+  @ApiResponse({ status: 200, description: 'Perfil en revisión (IN_REVIEW)' })
+  @ApiResponse({
+    status: 400,
+    description:
+      'RUC sin 11 dígitos, ficha ajena al almacenamiento, ya en revisión o verificada, o antes de que acabe la espera tras un rechazo',
+  })
+  async submitProfile(
     @Headers(USER_ID_HEADER) userId: string | undefined,
-    @Body() resource: CompleteCompanyProfileResource,
+    @Body() resource: SubmitCompanyProfileResource,
     @Res() res: Response,
   ) {
     return this.respond(res, async () => {
       const company = await this.mine(userId);
-      const updated = await this.companyCommandService.handleCompleteProfile(
-        CompleteCompanyProfileCommandFromResourceAssembler.toCommandFromResource(
+      const updated =
+        await this.companyCommandService.handleSubmitForVerification(
+          new SubmitCompanyForVerificationCommand(
+            company.id.value,
+            {
+              rucNumber: resource.rucNumber,
+              businessName: resource.businessName,
+              industrySector: resource.industrySector,
+              contactPhone: resource.contactPhone,
+              legalAddress: resource.legalAddress,
+            },
+            resource.rucDocumentUrl,
+          ),
+        );
+      return CompanyProfileResourceFromEntityAssembler.toResourceFromEntity(
+        updated,
+      );
+    });
+  }
+
+  @Patch('contact')
+  @ApiOperation({
+    summary:
+      'Cambiar el contacto de una empresa verificada (sector, teléfono y dirección); el RUC y la razón social no cambian',
+  })
+  @ApiResponse({ status: 400, description: 'La empresa no está verificada' })
+  async updateContact(
+    @Headers(USER_ID_HEADER) userId: string | undefined,
+    @Body() resource: UpdateCompanyContactResource,
+    @Res() res: Response,
+  ) {
+    return this.respond(res, async () => {
+      const company = await this.mine(userId);
+      const updated = await this.companyCommandService.handleUpdateContact(
+        new UpdateCompanyContactCommand(
           company.id.value,
-          resource,
+          resource.industrySector,
+          resource.contactPhone,
+          resource.legalAddress,
         ),
+      );
+      return CompanyProfileResourceFromEntityAssembler.toResourceFromEntity(
+        updated,
+      );
+    });
+  }
+
+  @Post('ruc/upload-url')
+  @ApiOperation({
+    summary:
+      'Solicitar una URL prefirmada para subir la ficha RUC (el PDF firmado que se descarga de SUNAT)',
+  })
+  async requestRucUploadUrl(
+    @Headers(USER_ID_HEADER) userId: string | undefined,
+    @Body() resource: RequestUploadUrlResource,
+    @Res() res: Response,
+  ) {
+    return this.respond(res, async () => {
+      const company = await this.mine(userId);
+      return this.companyCommandService.handleRequestRucUploadUrl(
+        new RequestCompanyRucUploadUrlCommand(
+          company.id.value,
+          resource.contentType,
+        ),
+      );
+    });
+  }
+
+  @Post('logo/upload-url')
+  @ApiOperation({
+    summary: 'Solicitar una URL prefirmada para subir el logo (JPG o PNG)',
+  })
+  async requestLogoUploadUrl(
+    @Headers(USER_ID_HEADER) userId: string | undefined,
+    @Body() resource: RequestUploadUrlResource,
+    @Res() res: Response,
+  ) {
+    return this.respond(res, async () => {
+      const company = await this.mine(userId);
+      return this.companyCommandService.handleRequestLogoUploadUrl(
+        new RequestCompanyLogoUploadUrlCommand(
+          company.id.value,
+          resource.contentType,
+        ),
+      );
+    });
+  }
+
+  @Patch('logo')
+  @ApiOperation({ summary: 'Registrar el logo ya subido' })
+  async updateLogo(
+    @Headers(USER_ID_HEADER) userId: string | undefined,
+    @Body() resource: UploadCompanyLogoResource,
+    @Res() res: Response,
+  ) {
+    return this.respond(res, async () => {
+      const company = await this.mine(userId);
+      const updated = await this.companyCommandService.handleUploadLogo(
+        new UploadCompanyLogoCommand(company.id.value, resource.logoUrl),
       );
       return CompanyProfileResourceFromEntityAssembler.toResourceFromEntity(
         updated,

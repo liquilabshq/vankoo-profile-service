@@ -7,6 +7,7 @@ export class CompanyProfileResourceFromEntityAssembler {
   public static toResourceFromEntity(entity: Company): CompanyProfileResource {
     const certification = entity.sustainabilityCertification;
     const address = entity.legalAddress;
+    const review = entity.getKycReview();
     return {
       ...CompanyResourceFromEntityAssembler.toResourceFromEntity(entity),
       contactEmail: entity.contactEmail.address,
@@ -31,6 +32,18 @@ export class CompanyProfileResourceFromEntityAssembler {
         criteria: certification.criteria,
         reasonCodes: certification.reasonCodes,
         decidedAt: certification.decidedAt?.toISOString(),
+      },
+      kyc: {
+        status: entity.getKycStatus(),
+        submittedAt: review.submittedAt?.toISOString(),
+        decidedAt: review.decidedAt?.toISOString(),
+        checks: review.checks,
+        reasonCodes: review.reasonCodes,
+        fieldErrors: review.fieldErrors,
+        evidence: review.evidence,
+        demo: review.demo,
+        attempts: review.attempts,
+        retryAvailableAt: review.retryAvailableAt?.toISOString(),
       },
     };
   }
