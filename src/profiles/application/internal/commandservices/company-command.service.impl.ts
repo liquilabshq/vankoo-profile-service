@@ -30,10 +30,16 @@ import type { IEventPublisherService } from '../../../domain/services/event-publ
 import { RequestSustainabilityCertificateUploadUrlCommand } from '../../../domain/model/commands/request-sustainability-certificate-upload-url.command';
 import { SubmitSustainabilityCertificateCommand } from '../../../domain/model/commands/submit-sustainability-certificate.command';
 import { RecordSustainabilityDecisionCommand } from '../../../domain/model/commands/record-sustainability-decision.command';
+import { SubmitCompanyForVerificationCommand } from '../../../domain/model/commands/submit-company-for-verification.command';
+import { RecordCompanyVerificationCommand } from '../../../domain/model/commands/record-company-verification.command';
+import { UpdateCompanyContactCommand } from '../../../domain/model/commands/update-company-contact.command';
 
 const PROFILE_EVENTS_TOPIC = 'vankoo.profile.events';
 /** Versión del evento SustainabilityCertificateSubmitted: ver docs/contracts/profile-events.md. */
 const CERTIFICATE_SUBMITTED_SCHEMA_VERSION = 1;
+/** Versión de CompanyVerificationRequested y CompanyKycStatusChanged: ver docs/contracts/profile-events.md. */
+const KYC_EVENTS_SCHEMA_VERSION = 1;
+const PDF = 'application/pdf';
 
 /**
  * @author LiquiLabs
@@ -125,6 +131,13 @@ export class CompanyCommandServiceImpl implements ICompanyCommandService {
       );
     }
 
+    // Solo una imagen de nuestro almacenamiento, en la carpeta de logos de la empresa.
+    const objectKey = this.fileStorageService.resolveObjectKey(command.logoUrl);
+    if (!objectKey?.startsWith(`companies/${company.id.value}/logo/`)) {
+      throw new Error(
+        'La URL del logo no pertenece a la carpeta de la empresa en el almacenamiento de Vankoo.',
+      );
+    }
     const logoUrl = new DocumentUrl(command.logoUrl);
     company.updateLogo(logoUrl);
 
@@ -143,6 +156,10 @@ export class CompanyCommandServiceImpl implements ICompanyCommandService {
       );
     }
 
+    // La ficha RUC se verifica por su firma digital, que solo trae el PDF de SUNAT.
+    if (command.contentType !== PDF) {
+      throw new Error('La ficha RUC debe ser el PDF que descargas de SUNAT.');
+    }
     const extension = resolveFileExtension(command.contentType);
     const objectKey = `companies/${command.companyId}/ruc/${randomUUID()}.${extension}`;
 
@@ -184,6 +201,7 @@ export class CompanyCommandServiceImpl implements ICompanyCommandService {
       email: company.contactEmail.address,
       kycStatus: company.getKycStatus(),
     });
+    await this.publishKycStatusChanged(company);
 
     return company;
   }
@@ -208,6 +226,7 @@ export class CompanyCommandServiceImpl implements ICompanyCommandService {
       kycStatus: company.getKycStatus(),
       reason: company.getKycRejectionReason()?.value,
     });
+    await this.publishKycStatusChanged(company);
 
     return company;
   }
@@ -292,5 +311,104 @@ export class CompanyCommandServiceImpl implements ICompanyCommandService {
     }
     await this.companyRepository.save(company);
     return company;
+  }
+
+  async handleSubmitForVerification(
+    command: SubmitCompanyForVerificationCommand,
+  ): Promise<Company> {
+    const company = await this.findCompany(command.companyId);
+
+    // Solo una URL de nuestro propio almacenamiento: el risk-service descargará esa clave.
+    const rucDocumentKey = this.fileStorageService.resolveObjectKey(
+      command.rucDocumentUrl,
+    );
+    if (!rucDocumentKey) {
+      throw new Error(
+        'La URL de la ficha RUC no pertenece al almacenamiento de Vankoo.',
+      );
+    }
+
+    const submittedAt = new Date();
+    company.submitForVerification(
+      command.data,
+      new DocumentUrl(command.rucDocumentUrl),
+      rucDocumentKey,
+      randomUUID(),
+      submittedAt,
+    );
+    await this.companyRepository.save(company);
+
+    const review = company.getKycReview();
+    await this.eventPublisherService.publish(
+      PROFILE_EVENTS_TOPIC,
+      {
+        eventId: randomUUID(),
+        eventType: 'CompanyVerificationRequested',
+        schemaVersion: KYC_EVENTS_SCHEMA_VERSION,
+        occurredAt: submittedAt.toISOString(),
+        profileType: 'COMPANY',
+        requestId: review.requestId,
+        companyId: company.id.value,
+        userId: company.userId.value,
+        rucNumber: company.rucNumber?.value,
+        businessName: company.businessName?.value,
+        rucDocumentKey: review.rucDocumentKey,
+      },
+      company.id.value,
+    );
+    await this.publishKycStatusChanged(company);
+
+    return company;
+  }
+
+  async handleRecordVerification(
+    command: RecordCompanyVerificationCommand,
+  ): Promise<Company | null> {
+    const company = await this.findCompany(command.companyId);
+    if (!company.recordVerification(command.decision)) {
+      return null;
+    }
+    await this.companyRepository.save(company);
+    await this.publishKycStatusChanged(company);
+    return company;
+  }
+
+  async handleUpdateContact(
+    command: UpdateCompanyContactCommand,
+  ): Promise<Company> {
+    const company = await this.findCompany(command.companyId);
+    company.updateContact(
+      command.industrySector,
+      command.contactPhone,
+      command.legalAddress,
+    );
+    await this.companyRepository.save(company);
+    return company;
+  }
+
+  private async findCompany(companyId: string): Promise<Company> {
+    const company = await this.companyRepository.findById(companyId);
+    if (!company) {
+      throw new NotFoundException(`Empresa con ID ${companyId} no encontrada.`);
+    }
+    return company;
+  }
+
+  /** Lo escucha Invoicing, que no deja subir facturas a una empresa sin verificar. */
+  private async publishKycStatusChanged(company: Company): Promise<void> {
+    await this.eventPublisherService.publish(
+      PROFILE_EVENTS_TOPIC,
+      {
+        eventId: randomUUID(),
+        eventType: 'CompanyKycStatusChanged',
+        schemaVersion: KYC_EVENTS_SCHEMA_VERSION,
+        occurredAt: new Date().toISOString(),
+        profileType: 'COMPANY',
+        companyId: company.id.value,
+        userId: company.userId.value,
+        kycStatus: company.getKycStatus(),
+      },
+      company.id.value,
+    );
   }
 }

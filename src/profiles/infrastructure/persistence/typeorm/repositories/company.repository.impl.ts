@@ -20,6 +20,10 @@ import {
 import { DocumentUrl } from '../../../../domain/model/valueobjects/document-url.vo';
 import { KycStatus } from '../../../../domain/model/valueobjects/kyc-status.enum';
 import { KycRejectionReason } from '../../../../domain/model/valueobjects/kyc-rejection-reason.vo';
+import {
+  KycReview,
+  VerificationDecisionValue,
+} from '../../../../domain/model/valueobjects/kyc-review.vo';
 
 @Injectable()
 export class CompanyRepositoryImpl implements ICompanyRepository {
@@ -64,6 +68,7 @@ export class CompanyRepositoryImpl implements ICompanyRepository {
       entity.kycRejectionReason
         ? new KycRejectionReason(entity.kycRejectionReason)
         : undefined,
+      this.toKycReview(entity.kycReview),
     );
 
     if (entity.rucDocumentUrl) {
@@ -121,6 +126,23 @@ export class CompanyRepositoryImpl implements ICompanyRepository {
     entity.kycStatus = company.getKycStatus();
     entity.kycRejectionReason = company.getKycRejectionReason()?.value ?? null;
 
+    const review = company.getKycReview();
+    entity.kycReview = {
+      requestId: review.requestId ?? null,
+      rucDocumentKey: review.rucDocumentKey ?? null,
+      submittedAt: review.submittedAt ?? null,
+      verificationId: review.verificationId ?? null,
+      decision: review.decision ?? null,
+      checks: review.checks,
+      reasonCodes: review.reasonCodes,
+      fieldErrors: review.fieldErrors,
+      evidence: review.evidence,
+      demo: review.demo,
+      decidedAt: review.decidedAt ?? null,
+      attempts: review.attempts,
+      retryAvailableAt: review.retryAvailableAt ?? null,
+    };
+
     await this.typeormRepo.save(entity);
   }
 
@@ -141,6 +163,27 @@ export class CompanyRepositoryImpl implements ICompanyRepository {
       columns.criteria ?? [],
       columns.reasonCodes ?? [],
       columns.decidedAt ?? undefined,
+    );
+  }
+
+  private toKycReview(
+    columns: CompanyEntity['kycReview'] | undefined,
+  ): KycReview {
+    if (!columns) return KycReview.none();
+    return new KycReview(
+      columns.requestId ?? undefined,
+      columns.rucDocumentKey ?? undefined,
+      columns.submittedAt ?? undefined,
+      columns.verificationId ?? undefined,
+      (columns.decision as VerificationDecisionValue | null) ?? undefined,
+      columns.checks ?? [],
+      columns.reasonCodes ?? [],
+      columns.fieldErrors ?? [],
+      columns.evidence ?? [],
+      columns.demo ?? false,
+      columns.decidedAt ?? undefined,
+      columns.attempts ?? 0,
+      columns.retryAvailableAt ?? undefined,
     );
   }
 }

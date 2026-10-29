@@ -226,10 +226,26 @@ El gateway solo rutea `/profile/api/v1/companies/me/**`, con JWT, y reenvía el 
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| GET | `/api/v1/companies/me` | La empresa, con `profileComplete` y el estado del certificado verde (`sustainability`) |
-| PATCH | `/api/v1/companies/me/profile` | Completar el perfil |
+| GET | `/api/v1/companies/me` | La empresa, con `profileComplete`, el estado del certificado verde (`sustainability`) y el de su KYC (`kyc`) |
+| POST | `/api/v1/companies/me/ruc/upload-url` | URL prefirmada para la ficha RUC (solo PDF) |
+| PATCH | `/api/v1/companies/me/profile` | Enviar los datos y la ficha RUC (`rucDocumentUrl`) para verificar la empresa: queda `IN_REVIEW` |
+| PATCH | `/api/v1/companies/me/contact` | Ya `VERIFIED`: cambiar sector, teléfono y dirección (el RUC y la razón social quedan fijos) |
+| POST | `/api/v1/companies/me/logo/upload-url` | URL prefirmada para el logo |
+| PATCH | `/api/v1/companies/me/logo` | Registrar el logo ya subido (`logoUrl`, de la carpeta `logo` de la empresa) |
 | POST | `/api/v1/companies/me/sustainability-certificate/upload-url` | URL prefirmada para el certificado (PDF, JPG o PNG) |
 | PUT | `/api/v1/companies/me/sustainability-certificate` | Registrar el certificado ya subido (`fileUrl`): queda `UNDER_REVIEW` |
+
+### El KYC de la empresa
+
+La empresa completa su perfil y sube su **ficha RUC** (el PDF que descarga de SUNAT, firmado digitalmente). Al enviarla, el perfil pasa a `IN_REVIEW` y Profile publica `CompanyVerificationRequested`. El **risk-service** verifica la firma de SUNAT sin salir a internet, lee la ficha y la contrasta con el padrón y la lista SSCO (reglas `kyc-v1`), y responde `CompanyVerificationIssued`. **Risk recomienda y Profile decide:**
+
+| Decisión de risk | Estado en Profile |
+|---|---|
+| `VERIFIED` | `VERIFIED`. Si la ficha era de demostración, `kyc.demo` es `true`: la web lo muestra como «Verificado (demo)» |
+| `REJECTED` | `REJECTED`, con los motivos (`kyc.reasonCodes`, `kyc.checks`) y una espera para reenviar: 24 h tras el primer rechazo, 72 h tras el segundo y 7 días desde el tercero (`kyc.retryAvailableAt`) |
+| `CORRECTION_REQUIRED` | `PENDING` otra vez, con los campos a corregir (`kyc.fieldErrors`, p. ej. `rucNumber`/`RUC_NOT_FOUND`) y sin espera |
+
+Cada cambio de estado publica `CompanyKycStatusChanged`, que escucha Invoicing para no dejar subir facturas a una empresa sin verificar. Las rutas internas `PATCH /companies/:id/kyc/verify` y `…/reject` siguen sirviendo, también con el perfil en revisión. Contrato en [docs/contracts/profile-events.md](docs/contracts/profile-events.md).
 
 ### El certificado verde
 
