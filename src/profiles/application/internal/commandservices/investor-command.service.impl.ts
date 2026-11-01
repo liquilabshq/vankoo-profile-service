@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { IInvestorCommandService } from '../../../domain/services/investor-command.service';
 import { UploadInvestorDniCommand } from '../../../domain/model/commands/upload-investor-dni.command';
@@ -27,12 +27,21 @@ import type {
 } from '../../../domain/services/file-storage.service';
 import { EVENT_PUBLISHER_SERVICE } from '../../../domain/services/event-publisher.service';
 import type { IEventPublisherService } from '../../../domain/services/event-publisher.service';
+import { DNI_VERIFICATION_SERVICE } from '../../../domain/services/dni-verification.service';
+import type { IDniVerificationService } from '../../../domain/services/dni-verification.service';
+import { KycStatus } from '../../../domain/model/valueobjects/kyc-status.enum';
 
 const PROFILE_EVENTS_TOPIC = 'vankoo.profile.events';
+
+const DNI_MISMATCH_REASON =
+  'El nombre declarado no coincide con el registrado para este DNI.';
+const DNI_NOT_FOUND_REASON = 'El DNI no existe en el registro consultado.';
 
 /** @author LiquiLabs */
 @Injectable()
 export class InvestorCommandServiceImpl implements IInvestorCommandService {
+  private readonly logger = new Logger(InvestorCommandServiceImpl.name);
+
   constructor(
     @Inject(INVESTOR_REPOSITORY)
     private readonly investorRepository: IInvestorRepository,
@@ -42,6 +51,9 @@ export class InvestorCommandServiceImpl implements IInvestorCommandService {
 
     @Inject(EVENT_PUBLISHER_SERVICE)
     private readonly eventPublisherService: IEventPublisherService,
+
+    @Inject(DNI_VERIFICATION_SERVICE)
+    private readonly dniVerificationService: IDniVerificationService,
   ) {}
 
   async handleCreateInvestor(
@@ -91,7 +103,65 @@ export class InvestorCommandServiceImpl implements IInvestorCommandService {
       email: investor.contactEmail.address,
     });
 
+    // 5. Verificación automática del DNI (función serverless). No bloquea la respuesta:
+    //    el KYC pasa a VERIFIED/REJECTED cuando la función contesta.
+    void this.autoVerifyDni(command);
+
     return investor;
+  }
+
+  /**
+   * Pide a la función serverless que confirme el DNI y aplica su veredicto con los
+   * mismos comandos que el flujo manual. Si no hay veredicto confiable (función
+   * apagada, caída, clave inválida...) el KYC queda PENDING para revisión manual.
+   */
+  private async autoVerifyDni(
+    command: CompleteInvestorProfileCommand,
+  ): Promise<void> {
+    if (!this.dniVerificationService.enabled) return;
+
+    try {
+      const current = await this.investorRepository.findById(
+        command.investorId,
+      );
+      if (current?.getKycStatus() !== KycStatus.PENDING) return;
+
+      const result = await this.dniVerificationService.verify({
+        investorId: command.investorId,
+        dni: command.dni,
+        firstName: command.firstName,
+        lastName: command.lastName,
+      });
+
+      switch (result.status) {
+        case 'VERIFIED':
+          await this.handleVerifyKyc(
+            new VerifyInvestorKycCommand(command.investorId),
+          );
+          break;
+        case 'NAME_MISMATCH':
+          await this.handleRejectKyc(
+            new RejectInvestorKycCommand(
+              command.investorId,
+              DNI_MISMATCH_REASON,
+            ),
+          );
+          break;
+        case 'NOT_FOUND':
+          await this.handleRejectKyc(
+            new RejectInvestorKycCommand(
+              command.investorId,
+              DNI_NOT_FOUND_REASON,
+            ),
+          );
+          break;
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Verificación automática del DNI no concluyó para el inversor ${command.investorId}; ` +
+          `queda en revisión manual: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   async handleUploadDni(command: UploadInvestorDniCommand): Promise<Investor> {
