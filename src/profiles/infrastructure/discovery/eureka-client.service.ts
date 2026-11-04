@@ -15,8 +15,16 @@ import { Eureka } from 'eureka-js-client';
 export class EurekaClientService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EurekaClientService.name);
   private readonly client: Eureka;
+  // Con EUREKA_ENABLED=false no se registra: en Azure no hay Discovery Server y el
+  // gateway llega al servicio por el DNS interno del Container Apps Environment.
+  private readonly enabled: boolean;
 
   constructor(private readonly configService: ConfigService) {
+    this.enabled =
+      (this.configService.get<string>('EUREKA_ENABLED') ?? 'true')
+        .trim()
+        .toLowerCase() !== 'false';
+
     const port = this.configService.get<number>('PORT') || 3000;
     const hostName =
       this.configService.get<string>('INSTANCE_HOSTNAME') || 'localhost';
@@ -47,6 +55,12 @@ export class EurekaClientService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit(): Promise<void> {
+    if (!this.enabled) {
+      this.logger.log(
+        'Eureka desactivado (EUREKA_ENABLED=false): no se registra en el Discovery Server',
+      );
+      return;
+    }
     return new Promise((resolve) => {
       this.client.start((error) => {
         if (error) {
@@ -62,6 +76,9 @@ export class EurekaClientService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    if (!this.enabled) {
+      return;
+    }
     return new Promise((resolve) => {
       this.client.stop(() => resolve());
     });
