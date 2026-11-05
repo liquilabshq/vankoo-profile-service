@@ -5,6 +5,10 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
+import {
+  buildKafkaConfig,
+  isKafkaEnabled,
+} from './profiles/infrastructure/messaging/kafka.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -17,8 +21,8 @@ async function bootstrap() {
   // Extraemos el servicio de configuración de forma nativa en NestJS
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT') || 3000;
-  const kafkaBrokers =
-    configService.get<string>('KAFKA_BROKERS') || 'localhost:9092';
+  const kafkaEnabled = isKafkaEnabled(configService);
+  const kafkaConfig = buildKafkaConfig(configService, 'profile-service');
 
   // 1. Configurar prefijo global y Versionamiento
   app.setGlobalPrefix('api');
@@ -55,20 +59,21 @@ async function bootstrap() {
     } as any),
   );
 
-  // 🚨 5. CONFIGURACIÓN DE KAFKA SEGURA 🚨
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.KAFKA,
-    options: {
-      client: {
-        brokers: [kafkaBrokers], // 👈 Usamos la variable extraída arriba
+  // 5. Consumidor de Kafka. Con KAFKA_ENABLED=false (entornos sin broker, como Azure
+  // mientras no exista el Event Hub) no se conecta y el servicio solo expone la API REST.
+  if (kafkaEnabled) {
+    app.connectMicroservice<MicroserviceOptions>({
+      transport: Transport.KAFKA,
+      options: {
+        client: kafkaConfig,
+        consumer: {
+          groupId: 'profile-service-consumer',
+        },
       },
-      consumer: {
-        groupId: 'profile-service-consumer',
-      },
-    },
-  });
+    });
+  }
 
-  // 6. Arrancar ambos motores (Kafka y REST HTTP)
+  // 6. Arrancar ambos motores (Kafka, si está activo, y REST HTTP)
   await app.startAllMicroservices();
   await app.listen(port);
 
@@ -76,6 +81,15 @@ async function bootstrap() {
     `🚀 Vankoo Profile Service is running on: http://localhost:${port}`,
   );
   logger.log(`📚 Documentación lista en: http://localhost:${port}/reference`);
-  logger.log(`🎧 Conectado a Kafka en el broker: ${kafkaBrokers}`);
+  if (kafkaEnabled) {
+    const brokers = Array.isArray(kafkaConfig.brokers)
+      ? kafkaConfig.brokers.join(', ')
+      : '';
+    logger.log(`🎧 Conectado a Kafka en el broker: ${brokers}`);
+  } else {
+    logger.warn(
+      'Kafka desactivado (KAFKA_ENABLED=false): no se consumen ni publican eventos',
+    );
+  }
 }
 bootstrap();

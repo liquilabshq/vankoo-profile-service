@@ -58,6 +58,14 @@ Estas son las variables disponibles:
 | `PROFILE_DB_USER` | Usuario de la base de datos | — |
 | `PROFILE_DB_PASS` | Contraseña de la base de datos | — |
 | `PROFILE_DB_NAME` | Nombre de la base de datos | — |
+| `PROFILE_DB_SSL` | `true` para conectar por TLS (obligatorio en Azure Database for PostgreSQL) | `false` |
+| `PORT` | Puerto HTTP del servicio | `3000` |
+| `KAFKA_ENABLED` | `false` arranca sin broker: no consume eventos y los salientes solo se escriben en el log | `true` |
+| `KAFKA_BROKERS` | Brokers de Kafka, separados por comas | `localhost:9092` |
+| `KAFKA_SSL` | `true` para conectar por TLS (Azure Event Hubs) | `false` |
+| `KAFKA_SASL_MECHANISM` | Mecanismo SASL: `plain`, `scram-sha-256` o `scram-sha-512` | `plain` |
+| `KAFKA_SASL_USERNAME` / `KAFKA_SASL_PASSWORD` | Credenciales SASL. En Event Hubs: `$ConnectionString` y la cadena de conexión del namespace | — |
+| `EUREKA_ENABLED` | `false` para no registrarse en el Discovery Server (Azure) | `true` |
 | `STORAGE_PROVIDER` | Proveedor de almacenamiento a usar: `minio` o `s3` | `minio` |
 | `MINIO_ENDPOINT` | Host del servidor MinIO (S3-compatible) | `localhost` |
 | `MINIO_PORT` | Puerto del servidor MinIO | `9100` |
@@ -138,6 +146,16 @@ El proyecto incluye un `Dockerfile` multi-stage: una etapa `builder` que instala
    El contenedor expone el puerto `3000` (definido en el `Dockerfile` con `EXPOSE 3000`).
 
 > Nota: Este repositorio no incluye aún un `docker-compose.yml` para levantar el servicio junto a sus dependencias (Postgres, MinIO). Si necesitas ese flujo localmente, puedes crear uno que defina los servicios `profile-service`, `postgres` y `minio`, o levantar esas dependencias por separado y apuntar las variables `PROFILE_DB_*` / `MINIO_*` de tu `.env` hacia ellas. Para usar Amazon S3 en vez de MinIO, define `STORAGE_PROVIDER=s3` junto con las variables `AWS_*` — no requiere ningún contenedor local.
+
+### Azure
+
+En Azure corre como la Container App `vankoo-profile-service` (ingress interno, puerto 3000), con su propio Azure Database for PostgreSQL. Ambos los crea el Terraform de `vankoo-infra` (`terraform/data` y `terraform/apps`), que también le pasa todas las variables de entorno: nadie tiene que copiarlas. El gateway la alcanza con `PROFILE_SERVICE_URI=http://vankoo-profile-service`.
+
+Cada merge a `develop` dispara `.github/workflows/ci.yml`: pruebas, build y, después, el job `deliver`, que construye la imagen, la publica en el registro y la despliega con el workflow reutilizable `deliver-container-app.yml` de `vankoo-infra`. El job solo cambia la imagen; el resto de la configuración es de Terraform.
+
+Mientras no haya Kafka en Azure, la app corre con `KAFKA_ENABLED=false`. Mientras tanto no recibe `vankoo.iam.events`, así que **no crea el perfil (empresa o inversor) de los usuarios que se registran** en ese entorno, y `/companies/me` responde 404 para ellos. Para conectarla a Azure Event Hubs basta con cambiar variables en Terraform: `KAFKA_ENABLED=true`, `KAFKA_BROKERS=<namespace>.servicebus.windows.net:9093`, `KAFKA_SSL=true` y las credenciales `KAFKA_SASL_*`.
+
+Las sondas de la Container App usan `GET /api/v1`, porque el servicio aún no tiene un endpoint de salud propio.
 
 ## Pruebas (Testing)
 

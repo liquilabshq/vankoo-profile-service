@@ -48,6 +48,12 @@ import { DiscoveryModule } from './profiles/infrastructure/discovery/discovery.m
           synchronize: true, // pasar a false en produccion
           logging: true,
           namingStrategy: new SnakeNamingStrategy(),
+          // Azure Database for PostgreSQL exige TLS: PROFILE_DB_SSL=true en Azure. En local
+          // (Postgres del compose, sin certificado) se queda en false.
+          ssl:
+            (configService.get<string>('PROFILE_DB_SSL') ?? 'false')
+              .trim()
+              .toLowerCase() === 'true',
         };
       },
     }),
