@@ -7,6 +7,8 @@ import { CompaniesModule } from './profiles/companies.module';
 import { InvestorsModule } from './profiles/investors.module';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { UserRegisteredSubscriber } from './profiles/interfaces/events/user-registered.subscriber';
+import { GreenCertificationIssuedSubscriber } from './profiles/interfaces/events/green-certification-issued.subscriber';
+import { CompanyVerificationIssuedSubscriber } from './profiles/interfaces/events/company-verification-issued.subscriber';
 import { DiscoveryModule } from './profiles/infrastructure/discovery/discovery.module';
 
 @Module({
@@ -46,6 +48,12 @@ import { DiscoveryModule } from './profiles/infrastructure/discovery/discovery.m
           synchronize: true, // pasar a false en produccion
           logging: true,
           namingStrategy: new SnakeNamingStrategy(),
+          // Azure Database for PostgreSQL exige TLS: PROFILE_DB_SSL=true en Azure. En local
+          // (Postgres del compose, sin certificado) se queda en false.
+          ssl:
+            (configService.get<string>('PROFILE_DB_SSL') ?? 'false')
+              .trim()
+              .toLowerCase() === 'true',
         };
       },
     }),
@@ -57,7 +65,12 @@ import { DiscoveryModule } from './profiles/infrastructure/discovery/discovery.m
     // 4. Descubrimiento de servicios (Eureka)
     DiscoveryModule,
   ],
-  controllers: [AppController, UserRegisteredSubscriber],
+  controllers: [
+    AppController,
+    UserRegisteredSubscriber,
+    GreenCertificationIssuedSubscriber,
+    CompanyVerificationIssuedSubscriber,
+  ],
   providers: [AppService],
 })
 export class AppModule {}

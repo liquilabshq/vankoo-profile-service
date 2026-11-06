@@ -8,5 +8,7 @@ export const COMPANY_REPOSITORY = 'COMPANY_REPOSITORY';
 
 export interface ICompanyRepository {
   findById(id: string): Promise<Company | null>;
+  /** La empresa de una cuenta de IAM: el userId viene del JWT (X-User-Id). */
+  findByUserId(userId: string): Promise<Company | null>;
   save(company: Company): Promise<void>;
 }

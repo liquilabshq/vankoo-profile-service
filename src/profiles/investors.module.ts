@@ -7,6 +7,7 @@ import { BankAccountEntity } from './infrastructure/persistence/typeorm/entities
 import { InvestorRepositoryImpl } from './infrastructure/persistence/typeorm/repositories/investor.repository.impl';
 import { StorageModule } from './infrastructure/storage/storage.module';
 import { MessagingModule } from './infrastructure/messaging/messaging.module';
+import { DniVerificationModule } from './infrastructure/verification/dni-verification.module';
 
 // Dominio (Contratos)
 import { INVESTOR_REPOSITORY } from './domain/repositories/investor.repository';
@@ -30,6 +31,7 @@ import { InvestorsController } from './interfaces/rest/investors.controller';
     TypeOrmModule.forFeature([InvestorEntity, BankAccountEntity]),
     StorageModule,
     MessagingModule,
+    DniVerificationModule,
   ],
   controllers: [InvestorsController],
   providers: [

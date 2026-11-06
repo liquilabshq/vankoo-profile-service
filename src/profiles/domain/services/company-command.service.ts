@@ -7,6 +7,12 @@ import { RequestCompanyRucUploadUrlCommand } from '../model/commands/request-com
 import { RequestCompanyLogoUploadUrlCommand } from '../model/commands/request-company-logo-upload-url.command';
 import { VerifyCompanyKycCommand } from '../model/commands/verify-company-kyc.command';
 import { RejectCompanyKycCommand } from '../model/commands/reject-company-kyc.command';
+import { RequestSustainabilityCertificateUploadUrlCommand } from '../model/commands/request-sustainability-certificate-upload-url.command';
+import { SubmitSustainabilityCertificateCommand } from '../model/commands/submit-sustainability-certificate.command';
+import { RecordSustainabilityDecisionCommand } from '../model/commands/record-sustainability-decision.command';
+import { SubmitCompanyForVerificationCommand } from '../model/commands/submit-company-for-verification.command';
+import { RecordCompanyVerificationCommand } from '../model/commands/record-company-verification.command';
+import { UpdateCompanyContactCommand } from '../model/commands/update-company-contact.command';
 import { UploadUrlResult } from './file-storage.service';
 
 /**
@@ -29,4 +35,20 @@ export interface ICompanyCommandService {
   ): Promise<UploadUrlResult>;
   handleVerifyKyc(command: VerifyCompanyKycCommand): Promise<Company>;
   handleRejectKyc(command: RejectCompanyKycCommand): Promise<Company>;
+  handleRequestSustainabilityCertificateUploadUrl(
+    command: RequestSustainabilityCertificateUploadUrlCommand,
+  ): Promise<UploadUrlResult>;
+  handleSubmitSustainabilityCertificate(
+    command: SubmitSustainabilityCertificateCommand,
+  ): Promise<Company>;
+  handleRecordSustainabilityDecision(
+    command: RecordSustainabilityDecisionCommand,
+  ): Promise<Company | null>;
+  handleSubmitForVerification(
+    command: SubmitCompanyForVerificationCommand,
+  ): Promise<Company>;
+  handleRecordVerification(
+    command: RecordCompanyVerificationCommand,
+  ): Promise<Company | null>;
+  handleUpdateContact(command: UpdateCompanyContactCommand): Promise<Company>;
 }

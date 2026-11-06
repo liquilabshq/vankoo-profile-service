@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Kafka, Producer } from 'kafkajs';
 import { IEventPublisherService } from '../../domain/services/event-publisher.service';
+import { buildKafkaConfig } from './kafka.config';
 
 /**
  * @author LiquiLabs
@@ -20,14 +21,9 @@ export class KafkaEventPublisherService
   private readonly producer: Producer;
 
   constructor(private readonly configService: ConfigService) {
-    const brokers = [
-      this.configService.get<string>('KAFKA_BROKERS') || 'localhost:9092',
-    ];
-
-    const kafka = new Kafka({
-      clientId: 'profile-service-producer',
-      brokers,
-    });
+    const kafka = new Kafka(
+      buildKafkaConfig(this.configService, 'profile-service-producer'),
+    );
     this.producer = kafka.producer();
   }
 
@@ -42,11 +38,12 @@ export class KafkaEventPublisherService
   async publish(
     topic: string,
     payload: Record<string, unknown>,
+    key?: string,
   ): Promise<void> {
     try {
       await this.producer.send({
         topic,
-        messages: [{ value: JSON.stringify(payload) }],
+        messages: [{ key, value: JSON.stringify(payload) }],
       });
     } catch (error) {
       this.logger.error(

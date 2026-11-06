@@ -58,6 +58,14 @@ Estas son las variables disponibles:
 | `PROFILE_DB_USER` | Usuario de la base de datos | — |
 | `PROFILE_DB_PASS` | Contraseña de la base de datos | — |
 | `PROFILE_DB_NAME` | Nombre de la base de datos | — |
+| `PROFILE_DB_SSL` | `true` para conectar por TLS (obligatorio en Azure Database for PostgreSQL) | `false` |
+| `PORT` | Puerto HTTP del servicio | `3000` |
+| `KAFKA_ENABLED` | `false` arranca sin broker: no consume eventos y los salientes solo se escriben en el log | `true` |
+| `KAFKA_BROKERS` | Brokers de Kafka, separados por comas | `localhost:9092` |
+| `KAFKA_SSL` | `true` para conectar por TLS (Azure Event Hubs) | `false` |
+| `KAFKA_SASL_MECHANISM` | Mecanismo SASL: `plain`, `scram-sha-256` o `scram-sha-512` | `plain` |
+| `KAFKA_SASL_USERNAME` / `KAFKA_SASL_PASSWORD` | Credenciales SASL. En Event Hubs: `$ConnectionString` y la cadena de conexión del namespace | — |
+| `EUREKA_ENABLED` | `false` para no registrarse en el Discovery Server (Azure) | `true` |
 | `STORAGE_PROVIDER` | Proveedor de almacenamiento a usar: `minio` o `s3` | `minio` |
 | `MINIO_ENDPOINT` | Host del servidor MinIO (S3-compatible) | `localhost` |
 | `MINIO_PORT` | Puerto del servidor MinIO | `9100` |
@@ -139,6 +147,16 @@ El proyecto incluye un `Dockerfile` multi-stage: una etapa `builder` que instala
 
 > Nota: Este repositorio no incluye aún un `docker-compose.yml` para levantar el servicio junto a sus dependencias (Postgres, MinIO). Si necesitas ese flujo localmente, puedes crear uno que defina los servicios `profile-service`, `postgres` y `minio`, o levantar esas dependencias por separado y apuntar las variables `PROFILE_DB_*` / `MINIO_*` de tu `.env` hacia ellas. Para usar Amazon S3 en vez de MinIO, define `STORAGE_PROVIDER=s3` junto con las variables `AWS_*` — no requiere ningún contenedor local.
 
+### Azure
+
+En Azure corre como la Container App `vankoo-profile-service` (ingress interno, puerto 3000), con su propio Azure Database for PostgreSQL. Ambos los crea el Terraform de `vankoo-infra` (`terraform/data` y `terraform/apps`), que también le pasa todas las variables de entorno: nadie tiene que copiarlas. El gateway la alcanza con `PROFILE_SERVICE_URI=http://vankoo-profile-service`.
+
+Cada merge a `develop` dispara `.github/workflows/ci.yml`: pruebas, build y, después, el job `deliver`, que construye la imagen, la publica en el registro y la despliega con el workflow reutilizable `deliver-container-app.yml` de `vankoo-infra`. El job solo cambia la imagen; el resto de la configuración es de Terraform.
+
+Mientras no haya Kafka en Azure, la app corre con `KAFKA_ENABLED=false`. Mientras tanto no recibe `vankoo.iam.events`, así que **no crea el perfil (empresa o inversor) de los usuarios que se registran** en ese entorno, y `/companies/me` responde 404 para ellos. Para conectarla a Azure Event Hubs basta con cambiar variables en Terraform: `KAFKA_ENABLED=true`, `KAFKA_BROKERS=<namespace>.servicebus.windows.net:9093`, `KAFKA_SSL=true` y las credenciales `KAFKA_SASL_*`.
+
+Las sondas de la Container App usan `GET /api/v1`, porque el servicio aún no tiene un endpoint de salud propio.
+
 ## Pruebas (Testing)
 
 ```bash
@@ -219,6 +237,39 @@ Para subir archivos (foto de inversor, DNI, logo de empresa, RUC), el servicio *
 3. **Confirmar la subida** — `POST /:id/photo` (o `/dni`, `/logo`, `/ruc`) enviando el `fileUrl` obtenido en el paso 1. El backend valida la URL (`@IsUrl`) y actualiza el agregado correspondiente (inversor o empresa) con la referencia final.
 
 Este patrón evita exponer las credenciales de almacenamiento al cliente y mantiene el microservicio desacoplado del tráfico pesado de archivos.
+
+### La empresa de quien llama: `/companies/me`
+
+El gateway solo rutea `/profile/api/v1/companies/me/**`, con JWT, y reenvía el id del usuario en `X-User-Id`. Estas rutas buscan la empresa por ese `userId` (`findByUserId`), así que cada usuario solo ve y cambia la suya. Las rutas por `:id` siguen existiendo para uso interno, pero el gateway no las expone.
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| GET | `/api/v1/companies/me` | La empresa, con `profileComplete`, el estado del certificado verde (`sustainability`) y el de su KYC (`kyc`) |
+| POST | `/api/v1/companies/me/ruc/upload-url` | URL prefirmada para la ficha RUC (solo PDF) |
+| PATCH | `/api/v1/companies/me/profile` | Enviar los datos y la ficha RUC (`rucDocumentUrl`) para verificar la empresa: queda `IN_REVIEW` |
+| PATCH | `/api/v1/companies/me/contact` | Ya `VERIFIED`: cambiar sector, teléfono y dirección (el RUC y la razón social quedan fijos) |
+| POST | `/api/v1/companies/me/logo/upload-url` | URL prefirmada para el logo |
+| PATCH | `/api/v1/companies/me/logo` | Registrar el logo ya subido (`logoUrl`, de la carpeta `logo` de la empresa) |
+| POST | `/api/v1/companies/me/sustainability-certificate/upload-url` | URL prefirmada para el certificado (PDF, JPG o PNG) |
+| PUT | `/api/v1/companies/me/sustainability-certificate` | Registrar el certificado ya subido (`fileUrl`): queda `UNDER_REVIEW` |
+
+### El KYC de la empresa
+
+La empresa completa su perfil y sube su **ficha RUC** (el PDF que descarga de SUNAT, firmado digitalmente). Al enviarla, el perfil pasa a `IN_REVIEW` y Profile publica `CompanyVerificationRequested`. El **risk-service** verifica la firma de SUNAT sin salir a internet, lee la ficha y la contrasta con el padrón y la lista SSCO (reglas `kyc-v1`), y responde `CompanyVerificationIssued`. **Risk recomienda y Profile decide:**
+
+| Decisión de risk | Estado en Profile |
+|---|---|
+| `VERIFIED` | `VERIFIED`. Si la ficha era de demostración, `kyc.demo` es `true`: la web lo muestra como «Verificado (demo)» |
+| `REJECTED` | `REJECTED`, con los motivos (`kyc.reasonCodes`, `kyc.checks`) y una espera para reenviar: 24 h tras el primer rechazo, 72 h tras el segundo y 7 días desde el tercero (`kyc.retryAvailableAt`) |
+| `CORRECTION_REQUIRED` | `PENDING` otra vez, con los campos a corregir (`kyc.fieldErrors`, p. ej. `rucNumber`/`RUC_NOT_FOUND`) y sin espera |
+
+Cada cambio de estado publica `CompanyKycStatusChanged`, que escucha Invoicing para no dejar subir facturas a una empresa sin verificar. Las rutas internas `PATCH /companies/:id/kyc/verify` y `…/reject` siguen sirviendo, también con el perfil en revisión. Contrato en [docs/contracts/profile-events.md](docs/contracts/profile-events.md).
+
+### El certificado verde
+
+La empresa sube su certificado ambiental (ISO 14001 o ISO 50001) con el mismo patrón de URL prefirmada. Al registrarlo, el perfil pasa a `UNDER_REVIEW` y Profile publica `SustainabilityCertificateSubmitted`. El **risk-service** lo lee con IA, lo comprueba contra SUNAT y OEFA y responde `GreenCertificationIssued`. Profile guarda entonces el estado (`GREEN` o `NOT_GREEN`), la norma, el emisor, la vigencia y cada criterio con su motivo. Quien decide es el risk-service, no Profile. Contrato en [docs/contracts/profile-events.md](docs/contracts/profile-events.md).
+
+Requiere el perfil completo (RUC y razón social), porque el risk-service compara el titular del certificado con la razón social de SUNAT.
 
 ## Estándares de Código
 

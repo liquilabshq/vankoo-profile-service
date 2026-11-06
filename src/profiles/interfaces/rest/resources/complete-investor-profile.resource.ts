@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, ValidateNested } from 'class-validator';
+import { IsString, IsNotEmpty, Matches, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class AddressResource {
@@ -33,6 +33,9 @@ export class CompleteInvestorProfileResource {
   @ApiProperty({ example: '44556677' })
   @IsString()
   @IsNotEmpty()
+  @Matches(/^[0-9]{8}$/, {
+    message: 'El DNI debe tener exactamente 8 dígitos.',
+  })
   dni: string;
 
   @ApiProperty({ example: 'Andrés' })

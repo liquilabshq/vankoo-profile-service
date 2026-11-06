@@ -89,7 +89,7 @@ export class InvestorRepositoryImpl implements IInvestorRepository {
       state: investor.billingAddress?.state,
       postalCode: investor.billingAddress?.postalCode,
       country: investor.billingAddress?.country,
-    } as any;
+    } as InvestorEntity['billingAddress']; // Los campos pueden venir vacíos: las columnas admiten nulos
 
     entity.dniDocumentUrl = investor.getDniDocumentUrl()?.url ?? null;
     entity.photoUrl = investor.getPhotoUrl()?.url ?? null;

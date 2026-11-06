@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { ICompanyQueryService } from '../../../domain/services/company-query.service';
 import { GetCompanyByIdQuery } from '../../../domain/model/queries/get-company-by-id.query';
 import { Company } from '../../../domain/model/aggregates/company.aggregate';
+import { GetCompanyByUserIdQuery } from '../../../domain/model/queries/get-company-by-user-id.query';
 import { COMPANY_REPOSITORY } from '../../../domain/repositories/company.repository';
 import type { ICompanyRepository } from '../../../domain/repositories/company.repository';
 
@@ -17,5 +18,11 @@ export class CompanyQueryServiceImpl implements ICompanyQueryService {
     query: GetCompanyByIdQuery,
   ): Promise<Company | null> {
     return await this.companyRepository.findById(query.companyId);
+  }
+
+  async handleGetCompanyByUserId(
+    query: GetCompanyByUserIdQuery,
+  ): Promise<Company | null> {
+    return await this.companyRepository.findByUserId(query.userId);
   }
 }

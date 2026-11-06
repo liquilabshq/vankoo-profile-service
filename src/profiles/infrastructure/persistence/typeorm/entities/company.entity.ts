@@ -13,9 +13,72 @@ export class AddressEmbeddable {
 }
 
 export class SustainabilityEmbeddable {
+  // is_green y verification_date se mantienen (derivados del estado) para no romper la columna previa.
   @Column({ name: 'is_green', default: false }) isGreen: boolean;
   @Column({ name: 'verification_date', type: 'timestamp', nullable: true })
   verificationDate: Date | null;
+  @Column({ name: 'status', type: 'varchar', length: 20, default: 'NONE' })
+  status: string;
+  @Column({ name: 'submission_id', type: 'uuid', nullable: true })
+  submissionId: string | null;
+  @Column({ name: 'object_key', type: 'varchar', nullable: true })
+  objectKey: string | null;
+  @Column({ name: 'content_type', type: 'varchar', length: 40, nullable: true })
+  contentType: string | null;
+  @Column({ name: 'submitted_at', type: 'timestamptz', nullable: true })
+  submittedAt: Date | null;
+  @Column({
+    name: 'certification_id',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  certificationId: string | null;
+  @Column({ name: 'standard', type: 'varchar', length: 20, nullable: true })
+  standard: string | null;
+  @Column({ name: 'issuer', type: 'varchar', length: 300, nullable: true })
+  issuer: string | null;
+  @Column({ name: 'valid_until', type: 'date', nullable: true })
+  validUntil: string | null;
+  @Column({ name: 'criteria', type: 'jsonb', default: () => "'[]'" })
+  criteria: { code: string; passed: boolean; detail: string }[];
+  @Column({ name: 'reason_codes', type: 'jsonb', default: () => "'[]'" })
+  reasonCodes: string[];
+  @Column({ name: 'decided_at', type: 'timestamptz', nullable: true })
+  decidedAt: Date | null;
+}
+
+/** La revisión del KYC: la solicitud vigente, la última decisión del risk-service y la espera. */
+export class KycReviewEmbeddable {
+  @Column({ name: 'request_id', type: 'uuid', nullable: true })
+  requestId: string | null;
+  @Column({ name: 'ruc_document_key', type: 'varchar', nullable: true })
+  rucDocumentKey: string | null;
+  @Column({ name: 'submitted_at', type: 'timestamptz', nullable: true })
+  submittedAt: Date | null;
+  @Column({
+    name: 'verification_id',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  verificationId: string | null;
+  @Column({ name: 'decision', type: 'varchar', length: 30, nullable: true })
+  decision: string | null;
+  @Column({ name: 'checks', type: 'jsonb', default: () => "'[]'" })
+  checks: { code: string; passed: boolean; detail: string }[];
+  @Column({ name: 'reason_codes', type: 'jsonb', default: () => "'[]'" })
+  reasonCodes: string[];
+  @Column({ name: 'field_errors', type: 'jsonb', default: () => "'[]'" })
+  fieldErrors: { field: string; code: string }[];
+  @Column({ name: 'evidence', type: 'jsonb', default: () => "'[]'" })
+  evidence: { code: string; detail: string }[];
+  @Column({ name: 'demo', default: false }) demo: boolean;
+  @Column({ name: 'decided_at', type: 'timestamptz', nullable: true })
+  decidedAt: Date | null;
+  @Column({ name: 'attempts', type: 'int', default: 0 }) attempts: number;
+  @Column({ name: 'retry_available_at', type: 'timestamptz', nullable: true })
+  retryAvailableAt: Date | null;
 }
 
 /**
@@ -55,7 +118,7 @@ export class CompanyEntity {
   @Column(() => AddressEmbeddable, { prefix: 'legal_address' })
   legalAddress: AddressEmbeddable;
 
-  // 👇 Aplana la sostenibilidad en 2 columnas (sustainability_is_green, etc.)
+  // 👇 Aplana la sostenibilidad en columnas (sustainability_is_green, sustainability_status, etc.)
   @Column(() => SustainabilityEmbeddable, { prefix: 'sustainability' })
   sustainabilityStatus: SustainabilityEmbeddable;
 
@@ -64,6 +127,10 @@ export class CompanyEntity {
 
   @Column({ name: 'kyc_rejection_reason', type: 'varchar', nullable: true })
   kycRejectionReason: string | null;
+
+  // Aplana la revisión del KYC en columnas (kyc_request_id, kyc_checks, etc.)
+  @Column(() => KycReviewEmbeddable, { prefix: 'kyc' })
+  kycReview: KycReviewEmbeddable;
 
   // Enlaces de documentos subidos a MinIO (nacen vacíos/nulos)
   @Column({ name: 'logo_url', type: 'varchar', nullable: true }) //

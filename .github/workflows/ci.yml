@@ -1,0 +1,81 @@
+# CI/CD de Profile Service.
+#
+# - En cada PR y push a develop/main: pruebas unitarias y build.
+# - En push a develop (merge de un PR): además publica la imagen en el registro de
+#   Azure y la despliega en la Container App vankoo-profile-service, con el workflow
+#   reutilizable de vankoo-infra. La Container App la crea Terraform
+#   (vankoo-infra/terraform/apps); este pipeline solo cambia su imagen.
+#
+# El despliegue entra en Azure por OIDC como la identidad vankoo-github-ci: el repo
+# necesita los secretos AZURE_CLIENT_ID, AZURE_TENANT_ID y AZURE_SUBSCRIPTION_ID y el
+# environment "development" (ver "Añadir un servicio" en vankoo-infra/terraform/README.md).
+#
+# @author LiquiLabs
+
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: ESLint
+        run: pnpm exec eslint "{src,test}/**/*.ts"
+
+  build-test:
+    name: Tests y build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  deliver:
+    name: Deliver
+    needs: [lint, build-test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    permissions:
+      contents: read
+      id-token: write
+    uses: liquilabshq/vankoo-infra/.github/workflows/deliver-container-app.yml@develop
+    with:
+      image: profile-service
+      container-app: vankoo-profile-service
+    secrets: inherit
