@@ -28,13 +28,9 @@ permissions:
   contents: read
 
 jobs:
-  # El lint no bloquea el despliegue: develop arrastra errores previos de ESLint
-  # (any sin tipar en repositorios y subscribers). Quitar continue-on-error cuando
-  # se corrijan.
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -73,7 +69,7 @@ jobs:
 
   deliver:
     name: Deliver
-    needs: [build-test]
+    needs: [lint, build-test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     permissions:
       contents: read

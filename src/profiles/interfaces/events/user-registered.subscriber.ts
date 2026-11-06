@@ -7,6 +7,22 @@ import type { ICompanyCommandService } from '../../domain/services/company-comma
 import { CreateInvestorCommand } from '../../domain/model/commands/create-investor.command';
 import { CreateCompanyCommand } from '../../domain/model/commands/create-company.command';
 
+/** Datos del usuario que IAM publica en vankoo.iam.events al registrarlo. */
+export interface UserRegisteredEvent {
+  id: string;
+  email: string;
+  roles?: string[];
+}
+
+/** NestJS a veces entrega el JSON de Kafka envuelto en un atributo "value". */
+export type UserRegisteredMessage =
+  | UserRegisteredEvent
+  | { value: UserRegisteredEvent };
+
+/**
+ * @author LiquiLabs
+ * @summary Crea el perfil vacío (inversor o empresa) de cada usuario que se registra en IAM.
+ */
 @Controller()
 export class UserRegisteredSubscriber {
   constructor(
@@ -19,16 +35,20 @@ export class UserRegisteredSubscriber {
   ) {}
 
   @EventPattern('vankoo.iam.events') // El tópico exacto de Kafka UI
-  async handleUserRegisteredEvent(@Payload() message: any) {
+  async handleUserRegisteredEvent(@Payload() message: UserRegisteredMessage) {
     // NestJS a veces envuelve el JSON de Kafka dentro de un atributo "value".
     // Esto asegura que extraigamos los datos sin importar cómo lleguen.
-    const payload = message.value || message;
+    const payload: UserRegisteredEvent =
+      'value' in message && message.value
+        ? message.value
+        : (message as UserRegisteredEvent);
 
     console.log('\n=========================================');
     console.log('📥 [Kafka] ¡NUEVO EVENTO RECIBIDO DESDE IAM!');
     console.log('=========================================');
 
-    const { id, email, roles } = payload;
+    const { id, email } = payload;
+    const roles = payload.roles ?? [];
 
     try {
       if (roles.includes('ROLE_INVESTOR')) {
@@ -47,10 +67,14 @@ export class UserRegisteredSubscriber {
         const command = new CreateCompanyCommand(id, email);
         await this.companyCommandService.handleCreateCompany(command);
       } else {
-        console.warn(`⚠️ Rol ignorado por este microservicio: ${roles}`);
+        console.warn(
+          `⚠️ Rol ignorado por este microservicio: ${roles.join(', ')}`,
+        );
       }
     } catch (error) {
-      console.error(`❌ Error procesando el evento: ${error.message}`);
+      console.error(
+        `❌ Error procesando el evento: ${(error as Error).message}`,
+      );
     }
     console.log('=========================================\n');
   }

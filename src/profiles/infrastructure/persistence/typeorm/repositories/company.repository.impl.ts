@@ -100,7 +100,7 @@ export class CompanyRepositoryImpl implements ICompanyRepository {
       state: company.legalAddress?.state,
       postalCode: company.legalAddress?.postalCode,
       country: company.legalAddress?.country,
-    } as any; // Casteamos para engañar a TypeORM en caso estén nulos
+    } as CompanyEntity['legalAddress']; // Los campos pueden venir vacíos: las columnas admiten nulos
 
     const certification = company.sustainabilityCertification;
     entity.sustainabilityStatus = {

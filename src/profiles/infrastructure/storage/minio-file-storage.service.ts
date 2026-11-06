@@ -52,11 +52,19 @@ export class MinioFileStorageService
     // alcanzable desde dentro del contenedor — firmar una URL no debería depender de red).
     const region = 'us-east-1';
 
-    this.client = new Minio.Client({ endPoint, port, useSSL, accessKey, secretKey, region });
+    this.client = new Minio.Client({
+      endPoint,
+      port,
+      useSSL,
+      accessKey,
+      secretKey,
+      region,
+    });
 
     const publicUrl = this.configService.get<string>('MINIO_PUBLIC_URL');
     this.publicBaseUrl =
-      publicUrl || `${useSSL ? 'https' : 'http'}://${endPoint}:${port}/${this.bucketName}`;
+      publicUrl ||
+      `${useSSL ? 'https' : 'http'}://${endPoint}:${port}/${this.bucketName}`;
 
     if (publicUrl) {
       const parsedPublicUrl = new URL(publicUrl);
