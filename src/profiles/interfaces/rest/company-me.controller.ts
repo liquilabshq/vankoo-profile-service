@@ -10,7 +10,14 @@ import {
   Put,
   Res,
 } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiHeader,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { BEARER_AUTH } from '../../../documentation/openapi.config';
 import type { Response } from 'express';
 import { COMPANY_COMMAND_SERVICE } from '../../domain/services/company-command.service';
 import type { ICompanyCommandService } from '../../domain/services/company-command.service';
@@ -53,6 +60,8 @@ class CallerError extends Error {
  * leer ni cambiar la de otro cambiando un id en la URL.
  */
 @ApiTags('Companies (me)')
+// A través del gateway hace falta el JWT de IAM; el gateway lo cambia por X-User-Id.
+@ApiBearerAuth(BEARER_AUTH)
 @ApiHeader({
   name: 'X-User-Id',
   description: 'Id del usuario en IAM; lo pone el gateway',
