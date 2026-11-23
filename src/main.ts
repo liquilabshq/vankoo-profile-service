@@ -1,7 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { SwaggerModule } from '@nestjs/swagger';
+import type { Request, Response } from 'express';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
@@ -9,6 +10,10 @@ import {
   buildKafkaConfig,
   isKafkaEnabled,
 } from './profiles/infrastructure/messaging/kafka.config';
+import {
+  createOpenApiConfig,
+  OPENAPI_PATH,
+} from './documentation/openapi.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -40,15 +45,17 @@ async function bootstrap() {
     }),
   );
 
-  // 3. Configurar Swagger (OpenAPI)
-  const config = new DocumentBuilder()
-    .setTitle('Vankoo Profile Service')
-    .setDescription(
-      'Microservicio de gestión de perfiles para la plataforma Vankoo',
-    )
-    .setVersion('1.0')
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
+  // 3. Configurar Swagger (OpenAPI). El documento se publica también como JSON en
+  // /openapi/v1.json para que el Scalar agregado del gateway lo lea.
+  const document = SwaggerModule.createDocument(
+    app,
+    createOpenApiConfig(configService, port),
+  );
+  app
+    .getHttpAdapter()
+    .get(OPENAPI_PATH, (_request: Request, response: Response) => {
+      response.json(document);
+    });
 
   // 4. Integrar Scalar
   app.use(
