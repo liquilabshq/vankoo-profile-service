@@ -5,5 +5,7 @@ export const INVESTOR_REPOSITORY = 'INVESTOR_REPOSITORY';
 
 export interface IInvestorRepository {
   findById(id: string): Promise<Investor | null>;
+  /** El inversionista que nació del registro de ese usuario en IAM. */
+  findByUserId(userId: string): Promise<Investor | null>;
   save(investor: Investor): Promise<void>;
 }

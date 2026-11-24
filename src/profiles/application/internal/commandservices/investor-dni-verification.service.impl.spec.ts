@@ -40,6 +40,7 @@ function setUp(enabled = true) {
   );
   const repository: jest.Mocked<IInvestorRepository> = {
     findById: jest.fn().mockResolvedValue(investor),
+    findByUserId: jest.fn(),
     save: jest.fn().mockResolvedValue(undefined),
   };
   const storage = {} as jest.Mocked<IFileStorageService>;
@@ -138,13 +139,17 @@ describe('Verificación automática del DNI del inversor', () => {
     expect(investor.getKycStatus()).toBe(KycStatus.PENDING);
   });
 
-  it('no vuelve a verificar un KYC que ya fue procesado', async () => {
-    const { investor, verification, service } = setUp();
+  it('no reescribe ni vuelve a verificar un KYC que ya fue procesado', async () => {
+    const { investor, repository, verification, service } = setUp();
     investor.verifyKyc();
 
-    await service.handleCompleteProfile(COMMAND);
+    await expect(service.handleCompleteProfile(COMMAND)).rejects.toThrow(
+      'ya fue procesado',
+    );
     await settle();
 
+    expect(investor.dni).toBeUndefined();
+    expect(repository.save).not.toHaveBeenCalled();
     expect(verification.verify).not.toHaveBeenCalled();
   });
 

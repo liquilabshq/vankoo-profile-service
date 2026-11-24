@@ -53,6 +53,9 @@ export class Investor {
       country: string;
     },
   ): void {
+    // Un KYC ya resuelto no se reescribe: si no, un inversionista verificado podría
+    // cambiar su DNI sin que nadie lo volviera a comprobar.
+    this.assertKycIsPending();
     // Si algún dato es inválido, el constructor del VO debería lanzar un error.
     this.dni = new DniNumber(dni);
     this.fullName = new FullName(firstName, lastName);
