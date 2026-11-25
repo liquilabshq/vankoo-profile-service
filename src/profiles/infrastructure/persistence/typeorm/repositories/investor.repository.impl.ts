@@ -28,8 +28,15 @@ export class InvestorRepositoryImpl implements IInvestorRepository {
 
   async findById(id: string): Promise<Investor | null> {
     const entity = await this.typeormRepo.findOne({ where: { id } });
-    if (!entity) return null;
+    return entity ? this.toDomain(entity) : null;
+  }
 
+  async findByUserId(userId: string): Promise<Investor | null> {
+    const entity = await this.typeormRepo.findOne({ where: { userId } });
+    return entity ? this.toDomain(entity) : null;
+  }
+
+  private toDomain(entity: InvestorEntity): Investor {
     // Nuevo orden del constructor
     const investor = new Investor(
       new InvestorId(entity.id),

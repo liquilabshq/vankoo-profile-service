@@ -20,6 +20,7 @@ import { InvestorQueryServiceImpl } from './application/internal/queryservices/i
 
 // Interfaces (REST)
 import { InvestorsController } from './interfaces/rest/investors.controller';
+import { InvestorMeController } from './interfaces/rest/investor-me.controller';
 
 /**
  * @author LiquiLabs
@@ -33,7 +34,8 @@ import { InvestorsController } from './interfaces/rest/investors.controller';
     MessagingModule,
     DniVerificationModule,
   ],
-  controllers: [InvestorsController],
+  // InvestorMeController va primero: si no, GET /investors/me caería en GET /investors/:id.
+  controllers: [InvestorMeController, InvestorsController],
   providers: [
     { provide: INVESTOR_REPOSITORY, useClass: InvestorRepositoryImpl },
     { provide: INVESTOR_COMMAND_SERVICE, useClass: InvestorCommandServiceImpl },
